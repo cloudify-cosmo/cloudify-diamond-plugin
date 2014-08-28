@@ -1,5 +1,4 @@
 from setuptools import setup
-from configobj import ConfigObj
 
 setup(
     name='cloudify-diamond-plugin',
