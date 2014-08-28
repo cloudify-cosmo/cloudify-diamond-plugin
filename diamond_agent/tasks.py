@@ -1,5 +1,6 @@
 import os
 import sys
+from subprocess import call
 from cloudify.decorators import operation
 from configobj import ConfigObj
 
@@ -23,7 +24,7 @@ def install(ctx, **kwargs):
 
     ctx.runtime_properties['diamond_handlers'] = 'Cloudify'
 
-    create_config(ctx, path=ctx.runtime_properties['diamond_config_path'])
+    create_config(ctx)
 
 
 @operation
@@ -32,8 +33,13 @@ def uninstall(ctx, **kwargs):
 
 
 @operation
-def start(ctx, **kwargw):
-    pass
+def start(ctx, **kwargs):
+    cmd = 'diamond --configfile {}'\
+        .format(ctx.runtime_properties['diamond_config_path'])
+    try:
+        call(cmd.split())
+    except OSError:
+        ctx.logger.info('Failed starting Diamond')
 
 
 @operation
@@ -48,8 +54,8 @@ def enable_collector(ctx, collector_name, **kwargs):
     try:
         config = ConfigObj(infile=conf_path, file_error=True)
     except IOError:
-        ctx.logger('Collector {} not found. '
-                   'Enable failed'.format(collector_name))
+        ctx.logger.info('Collector {} not found. '
+                        'Enable failed'.format(collector_name))
     else:
         config['enabled'] = True
         config.write()
@@ -62,14 +68,14 @@ def disable_collector(ctx, collector_name, **kwargs):
     try:
         config = ConfigObj(infile=conf_path, file_error=True)
     except IOError:
-        ctx.logger('Collector {} not found. '
-                   'Disable failed'.format(collector_name))
+        ctx.logger.info('Collector {} not found. '
+                        'Disable failed'.format(collector_name))
     else:
         config['enabled'] = False
         config.write()
 
 
-def create_config(ctx, path):
+def create_config(ctx):
     """
     Create config file and write it into config_path
     """
@@ -88,13 +94,15 @@ def create_config(ctx, path):
             'collectors_reload_interval': 3600,
         },
         'handlers': {
-            'keys': 'rotated files',
+            'keys': 'rotated_file',
             'default': {},
         },
         'collectors': {
-            'hostname': '.'.join([ctx.node_name, ctx.node_id]),
-            'path_prefix': ctx.deployment_id,
-            'interval': ctx.properties['interval'],
+            'default': {
+                'hostname': '.'.join([ctx.node_name, ctx.node_id]),
+                'path_prefix': ctx.deployment_id,
+                'interval': ctx.properties['interval'],
+            },
         },
         'loggers': {
             'keys': 'root',
@@ -111,9 +119,14 @@ def create_config(ctx, path):
             'class': 'handlers.TimedRotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'default',
-            'args': "('/tmp/diamond.log', 'midnight', 1, 7)"
-        }
+            # 'args': '({}, {}, 1, 7)'.format('/tmp/diamond.log', 'midnight'),
+            'args': "('/tmp/diamond.log', 'midnight', 1, 7)",
+        },
+        'formatter_default': {
+            'format': '[%(asctime)s] [%(threadName)s] %(message)s',
+            'datefmt': '',
+        },
     }
-    config = ConfigObj(server_config)
-    config.filename = path
+    config = ConfigObj(server_config, indent_type='', list_values=False)
+    config.filename = ctx.runtime_properties['diamond_config_path']
     config.write()
