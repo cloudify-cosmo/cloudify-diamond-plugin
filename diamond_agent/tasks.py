@@ -1,12 +1,13 @@
 import os
 import sys
+from psutil import pid_exists
 from subprocess import call
 from cloudify.decorators import operation
 from configobj import ConfigObj
 
-# how do I run diamond? who executes it?
-# how do we make diamond run on reboot?
-# how do i restart diamond process? and make sure only one instance is running?
+# TODO: place log in homedir
+# TODO: add cloudify handler & configure it
+# TODO: paths cannot be unix only
 
 @operation
 def install(ctx, **kwargs):
@@ -22,7 +23,8 @@ def install(ctx, **kwargs):
     ctx.runtime_properties['diamond_hdl_conf_path'] = \
         os.path.join(sys.prefix, 'etc/diamond/handlers')
 
-    ctx.runtime_properties['diamond_handlers'] = 'Cloudify'
+    ctx.runtime_properties['diamond_handlers'] = \
+        'diamond.handler.archive.ArchiveHandler'
 
     create_config(ctx)
 
@@ -44,8 +46,13 @@ def start(ctx, **kwargs):
 
 @operation
 def stop(ctx, **kwargs):
-    pass
+    with open ('/tmp/diamond.pid') as f:
+        pid = int(f.read())
 
+    try:
+        os.kill(pid, 9)
+    except OSError:
+        ctx.logger.info('Failed stopping Diamond')
 
 @operation
 def enable_collector(ctx, collector_name, **kwargs):
