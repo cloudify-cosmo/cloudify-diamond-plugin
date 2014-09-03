@@ -24,7 +24,7 @@ def install(ctx, **kwargs):
         os.path.join(sys.prefix, 'etc/diamond/handlers')
 
     ctx.runtime_properties['diamond_handlers'] = \
-        'diamond.handler.archive.ArchiveHandler'
+        'cloudify_handler.cloudify.CloudifyHandler'
 
     create_config(ctx)
 
