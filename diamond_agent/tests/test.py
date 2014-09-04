@@ -9,6 +9,7 @@ from cloudify.mocks import MockCloudifyContext
 
 class TestDiamondPlugin(unittest.TestCase):
     def setUp(self):
+        os.environ['MANAGEMENT_IP'] = '127.0.0.1'
         self.config = {
             'deployment_id': 'dep',
             'node_name': 'vm',
@@ -30,18 +31,22 @@ class TestDiamondPlugin(unittest.TestCase):
         self.assertEqual(config_file['collectors']['default']['path_prefix'],
                          self.config['deployment_id'])
         self.assertEqual(config_file['collectors']['default']['hostname'],
-                         '.'.join([self.config['node_name'],self.config['node_id']]))
+                         '.'.join([self.config['node_name'],
+                                   self.config['node_id']]))
         self.assertEqual(config_file['collectors']['default']['interval'],
                          self.config['properties']['interval'])
 
-    def test_start(self):
+    def test_start_stop(self):
         tasks.start(self.ctx)
-        sleep(5)
+        sleep(3)
         with open('/tmp/diamond.pid', 'r') as f:
             pid = int(f.readline())
 
         if not pid_exists(pid):
             self.fail('diamond agent doesn\'t run')
         else:
-            os.kill(pid, 9)
+            tasks.stop(self.ctx)
+            sleep(2)
 
+        if pid_exists(pid):
+            self.fail('diamond agent didn\'t stop')

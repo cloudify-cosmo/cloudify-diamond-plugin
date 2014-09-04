@@ -1,13 +1,15 @@
 import os
 import sys
-from psutil import pid_exists
+import glob
 from subprocess import call
 from cloudify.decorators import operation
+from cloudify.utils import get_manager_ip
 from configobj import ConfigObj
 
 # TODO: place log in homedir
-# TODO: add cloudify handler & configure it
 # TODO: paths cannot be unix only
+# TODO: check if kill cannot be signal 9
+# TODO: add possibility to configure default collectors from BP
 
 @operation
 def install(ctx, **kwargs):
@@ -27,6 +29,14 @@ def install(ctx, **kwargs):
         'cloudify_handler.cloudify.CloudifyHandler'
 
     create_config(ctx)
+    disable_all_collectors(ctx.runtime_properties['diamond_col_conf_path'])
+    enable_collectors(ctx.runtime_properties['diamond_col_conf_path'],
+                      ['CPUCollector', 'MemoryCollector',
+                       'LoadAverageCollector', 'DiskUsageCollector'])
+
+    config_cloudify_handler(
+        os.path.join(ctx.runtime_properties['diamond_hdl_conf_path'],
+                     'CloudifyHandler.con'))
 
 
 @operation
@@ -54,32 +64,47 @@ def stop(ctx, **kwargs):
     except OSError:
         ctx.logger.info('Failed stopping Diamond')
 
-@operation
-def enable_collector(ctx, collector_name, **kwargs):
-    conf_path = os.path.join([ctx.runtime_properties['diamond_col_conf_path'],
-                              collector_name + '.conf'])
-    try:
-        config = ConfigObj(infile=conf_path, file_error=True)
-    except IOError:
-        ctx.logger.info('Collector {} not found. '
-                        'Enable failed'.format(collector_name))
-    else:
-        config['enabled'] = True
-        config.write()
+
+def enable_collector(path, collector):
+    conf_path = os.path.join(path, collector + '.conf')
+    config = ConfigObj(infile=conf_path, file_error=True)
+    config['enabled'] = True
+    config.write()
 
 
-@operation
-def disable_collector(ctx, collector_name, **kwargs):
-    conf_path = os.path.join([ctx.runtime_properties['diamond_col_conf_path'],
-                              collector_name + '.conf'])
-    try:
-        config = ConfigObj(infile=conf_path, file_error=True)
-    except IOError:
-        ctx.logger.info('Collector {} not found. '
-                        'Disable failed'.format(collector_name))
-    else:
-        config['enabled'] = False
-        config.write()
+def disable_collector(path, collector):
+    conf_path = os.path.join(path, collector + '.conf')
+    config = ConfigObj(infile=conf_path, file_error=True)
+    config['enabled'] = False
+    config.write()
+
+
+def enable_collectors(path, collectors):
+    for collector in collectors:
+        enable_collector(path, collector)
+
+
+def disable_all_collectors(path):
+    files = glob.glob(os.path.join(path, '*.conf'))
+    for f in files:
+        collector = os.path.splitext(os.path.basename(f))[0]
+        disable_collector(path, collector)
+
+
+def config_cloudify_handler(config_path):
+    handler_config = {
+        'rmq_server': get_manager_ip(),
+        'rmq_port': 5672,
+        'rmq_exchange': 'diamond',
+        'rmq_user': '',
+        'rmq_password': '',
+        'rmq_vhost': '',
+        'rmq_exchange_type': 'fanout',
+        'rmq_durable': False
+    }
+    config = ConfigObj(handler_config)
+    config.filename = config_path
+    config.write()
 
 
 def create_config(ctx):
