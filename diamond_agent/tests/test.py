@@ -15,7 +15,9 @@ class TestDiamondPlugin(unittest.TestCase):
             'node_name': 'vm',
             'node_id': 'vm_id',
             'properties': {
-                'interval': '10',
+                'config': {
+                    'interval': '10',
+                    }
             }
         }
         self.ctx = MockCloudifyContext(**self.config)
@@ -23,7 +25,8 @@ class TestDiamondPlugin(unittest.TestCase):
 
     def test_install(self):
         tasks.install(self.ctx)
-        config_path = self.ctx['diamond_config_path']
+        config_path = os.path.join(self.ctx['diamond_config_path'],
+                                   'diamond.conf')
         try:
             config_file = ConfigObj(infile=config_path, file_error=True)
         except IOError:
@@ -34,7 +37,7 @@ class TestDiamondPlugin(unittest.TestCase):
                          '.'.join([self.config['node_name'],
                                    self.config['node_id']]))
         self.assertEqual(config_file['collectors']['default']['interval'],
-                         self.config['properties']['interval'])
+                         self.config['properties']['config']['interval'])
 
     def test_start_stop(self):
         tasks.start(self.ctx)

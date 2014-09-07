@@ -1,5 +1,7 @@
-from diamond.handler.Handler import Handler
+import json
 import time
+from ast import literal_eval
+from diamond.handler.Handler import Handler
 
 try:
     import pika
@@ -42,7 +44,7 @@ class CloudifyHandler(Handler):
         self.rmq_user = None
         self.rmq_password = None
         self.rmq_vhost = '/'
-        self.rmq_exchange_type = 'fanout'
+        self.rmq_exchange_type = 'topic'
         self.rmq_durable = False
         self.rmq_heartbeat_interval = 300
 
@@ -71,7 +73,7 @@ class CloudifyHandler(Handler):
             self.rmq_exchange_type = self.config['rmq_exchange_type']
 
         if 'rmq_durable' in self.config:
-            self.rmq_durable = bool(self.config['rmq_durable'])
+            self.rmq_durable = literal_eval(self.config['rmq_durable'])
 
         if 'rmq_heartbeat_interval' in self.config:
             self.rmq_heartbeat_interval = int(
@@ -184,16 +186,23 @@ class CloudifyHandler(Handler):
         metric_path = metric.host.split('.')
 
         output = {
-            'instance': metric_path[1] if metric_path[1:2] else '',
-            'node': metric_path[0] if metric_path[0:1] else '',
-            'deployment': metric.getPathPrefix(),
+            # 'instance': metric_path[1] if metric_path[1:2] else '',
+            'node_id': metric_path[1] if metric_path[1:2] else '',
+            # 'node': metric_path[0] if metric_path[0:1] else '',
+            'node_name': metric_path[0] if metric_path[0:1] else '',
+            # 'deployment': metric.getPathPrefix(),
             'name': metric.getCollectorPath(),
             'path': metric.getMetricPath().replace('.', '_'),
-            'value': metric.value,
+            # 'value': metric.value,
+            'metric': float(metric.value),
             'unit': '',
             'type': metric.metric_type,
+
+            'host': 'localhost',
+            'service': metric.path,
+            'time': metric.timestamp,
         }
-        return str(output)
+        return json.dumps(output)
 
     def process(self, metric):
         """
@@ -206,8 +215,14 @@ class CloudifyHandler(Handler):
                     self._bind(rmq_server)
 
                 channel = self.channels[rmq_server]
+
+                self.log.info('exchange: {}\nrouting_key: {}\nbody: {}'.format(
+                    self.rmq_exchange,
+                    metric.getPathPrefix(),
+                    self.jsonify(metric)))
+
                 channel.basic_publish(exchange=self.rmq_exchange,
-                                      routing_key='',
+                                      routing_key=metric.getPathPrefix(),
                                       body=self.jsonify(metric))
             except pika.exceptions.AMQPError as exception:
                 self.log.error(

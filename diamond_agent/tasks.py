@@ -1,6 +1,8 @@
 import os
 import sys
 import glob
+from shutil import copytree
+from tempfile import mkdtemp
 from subprocess import call
 from cloudify.decorators import operation
 from cloudify.utils import get_manager_ip
@@ -11,19 +13,35 @@ from configobj import ConfigObj
 # TODO: check if kill cannot be signal 9
 # TODO: add possibility to configure default collectors from BP
 
+CONFIG_NAME = 'diamond.conf'
+
 @operation
 def install(ctx, **kwargs):
+
+    try:
+        prefix = ctx.properties['config']['path']
+    except KeyError:
+        prefix = mkdtemp(prefix='cloudify-')
+
     ctx.runtime_properties['diamond_config_path'] = \
-        os.path.join(sys.prefix, 'etc/diamond/diamond.conf')
+        os.path.join(prefix, 'etc')
+    if not os.path.isdir(ctx.runtime_properties['diamond_config_path']):
+        os.makedirs(ctx.runtime_properties['diamond_config_path'])
 
     ctx.runtime_properties['diamond_col_conf_path'] = \
-        os.path.join(sys.prefix, 'etc/diamond/collectors')
+        os.path.join(prefix, 'collectors')
+    # if not os.path.isdir(ctx.runtime_properties['diamond_col_conf_path']):
+    #     os.makedirs(ctx.runtime_properties['diamond_col_conf_path'])
+    copytree(os.path.join(sys.prefix, 'etc', 'diamond', 'collectors'),
+             ctx.runtime_properties['diamond_col_conf_path'])
 
     ctx.runtime_properties['diamond_col_path'] = \
-        os.path.join(sys.prefix, 'share/diamond/collectors')
+        os.path.join(sys.prefix, 'share', 'diamond', 'collectors')
 
     ctx.runtime_properties['diamond_hdl_conf_path'] = \
-        os.path.join(sys.prefix, 'etc/diamond/handlers')
+        os.path.join(prefix, 'handlers')
+    if not os.path.isdir(ctx.runtime_properties['diamond_hdl_conf_path']):
+        os.makedirs(ctx.runtime_properties['diamond_hdl_conf_path'])
 
     ctx.runtime_properties['diamond_handlers'] = \
         'cloudify_handler.cloudify.CloudifyHandler'
@@ -36,7 +54,8 @@ def install(ctx, **kwargs):
 
     config_cloudify_handler(
         os.path.join(ctx.runtime_properties['diamond_hdl_conf_path'],
-                     'CloudifyHandler.con'))
+                     'CloudifyHandler.conf'))
+    # start(ctx)
 
 
 @operation
@@ -47,7 +66,8 @@ def uninstall(ctx, **kwargs):
 @operation
 def start(ctx, **kwargs):
     cmd = 'diamond --configfile {}'\
-        .format(ctx.runtime_properties['diamond_config_path'])
+        .format(os.path.join(ctx.runtime_properties['diamond_config_path'],
+                             CONFIG_NAME))
     try:
         call(cmd.split())
     except OSError:
@@ -95,16 +115,20 @@ def config_cloudify_handler(config_path):
     handler_config = {
         'rmq_server': get_manager_ip(),
         'rmq_port': 5672,
-        'rmq_exchange': 'diamond',
+        'rmq_exchange': 'monitoring',
         'rmq_user': '',
         'rmq_password': '',
-        'rmq_vhost': '',
-        'rmq_exchange_type': 'fanout',
+        'rmq_vhost': '/',
+        'rmq_exchange_type': 'topic',
         'rmq_durable': False
     }
-    config = ConfigObj(handler_config)
+    config = ConfigObj(handler_config, write_empty_values=True)
     config.filename = config_path
     config.write()
+
+
+def copy_collectors(ctx):
+    pass
 
 
 def create_config(ctx):
@@ -133,7 +157,7 @@ def create_config(ctx):
             'default': {
                 'hostname': '.'.join([ctx.node_name, ctx.node_id]),
                 'path_prefix': ctx.deployment_id,
-                'interval': ctx.properties['interval'],
+                'interval': ctx.properties['config']['interval'],
             },
         },
         'loggers': {
@@ -159,6 +183,10 @@ def create_config(ctx):
             'datefmt': '',
         },
     }
-    config = ConfigObj(server_config, indent_type='', list_values=False)
-    config.filename = ctx.runtime_properties['diamond_config_path']
+    config = ConfigObj(server_config,
+                       indent_type='',
+                       list_values=False,
+                       write_empty_values=True)
+    config.filename = os.path.join(
+        ctx.runtime_properties['diamond_config_path'], CONFIG_NAME)
     config.write()
