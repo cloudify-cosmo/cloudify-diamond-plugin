@@ -14,6 +14,7 @@ from configobj import ConfigObj
 
 CONFIG_NAME = 'diamond.conf'
 
+
 @operation
 def install(ctx, **kwargs):
     configure_paths(ctx)
