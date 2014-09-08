@@ -11,51 +11,34 @@ from configobj import ConfigObj
 # TODO: place log in homedir
 # TODO: paths cannot be unix only
 # TODO: check if kill cannot be signal 9
-# TODO: add possibility to configure default collectors from BP
 
 CONFIG_NAME = 'diamond.conf'
 
 @operation
 def install(ctx, **kwargs):
-
-    try:
-        prefix = ctx.properties['config']['path']
-    except KeyError:
-        prefix = mkdtemp(prefix='cloudify-')
-
-    ctx.runtime_properties['diamond_config_path'] = \
-        os.path.join(prefix, 'etc')
-    if not os.path.isdir(ctx.runtime_properties['diamond_config_path']):
-        os.makedirs(ctx.runtime_properties['diamond_config_path'])
-
-    ctx.runtime_properties['diamond_col_conf_path'] = \
-        os.path.join(prefix, 'collectors')
-    # if not os.path.isdir(ctx.runtime_properties['diamond_col_conf_path']):
-    #     os.makedirs(ctx.runtime_properties['diamond_col_conf_path'])
-    copytree(os.path.join(sys.prefix, 'etc', 'diamond', 'collectors'),
-             ctx.runtime_properties['diamond_col_conf_path'])
-
-    ctx.runtime_properties['diamond_col_path'] = \
-        os.path.join(sys.prefix, 'share', 'diamond', 'collectors')
-
-    ctx.runtime_properties['diamond_hdl_conf_path'] = \
-        os.path.join(prefix, 'handlers')
-    if not os.path.isdir(ctx.runtime_properties['diamond_hdl_conf_path']):
-        os.makedirs(ctx.runtime_properties['diamond_hdl_conf_path'])
-
+    configure_paths(ctx)
     ctx.runtime_properties['diamond_handlers'] = \
         'cloudify_handler.cloudify.CloudifyHandler'
 
     create_config(ctx)
     disable_all_collectors(ctx.runtime_properties['diamond_col_conf_path'])
+
+    try:
+        collectors = ctx.properties['config']['colletors']
+    except KeyError:
+        collectors = ['CPUCollector', 'MemoryCollector',
+                      'LoadAverageCollector', 'DiskUsageCollector']
     enable_collectors(ctx.runtime_properties['diamond_col_conf_path'],
-                      ['CPUCollector', 'MemoryCollector',
-                       'LoadAverageCollector', 'DiskUsageCollector'])
+                      collectors)
 
     config_cloudify_handler(
         os.path.join(ctx.runtime_properties['diamond_hdl_conf_path'],
                      'CloudifyHandler.conf'))
-    # start(ctx)
+    try:
+        if ctx.properties['autostart']:
+            start(ctx)
+    except KeyError:
+        ctx.logger.info('autostart canceled')
 
 
 @operation
@@ -76,7 +59,7 @@ def start(ctx, **kwargs):
 
 @operation
 def stop(ctx, **kwargs):
-    with open ('/tmp/diamond.pid') as f:
+    with open('/tmp/diamond.pid') as f:
         pid = int(f.read())
 
     try:
@@ -111,11 +94,38 @@ def disable_all_collectors(path):
         disable_collector(path, collector)
 
 
+def configure_paths(ctx):
+    try:
+        prefix = ctx.properties['config']['prefix']
+    except KeyError:
+        prefix = mkdtemp(prefix='cloudify-')
+
+    ctx.runtime_properties['diamond_config_path'] = \
+        os.path.join(prefix, 'etc')
+    if not os.path.isdir(ctx.runtime_properties['diamond_config_path']):
+        os.makedirs(ctx.runtime_properties['diamond_config_path'])
+
+    ctx.runtime_properties['diamond_col_conf_path'] = \
+        os.path.join(prefix, 'etc', 'collectors')
+    copytree(os.path.join(sys.prefix, 'etc', 'diamond', 'collectors'),
+             ctx.runtime_properties['diamond_col_conf_path'])
+
+    ctx.runtime_properties['diamond_col_path'] = \
+        os.path.join(prefix, 'collectors')
+    copytree(os.path.join(sys.prefix, 'share', 'diamond', 'collectors'),
+             ctx.runtime_properties['diamond_col_path'])
+
+    ctx.runtime_properties['diamond_hdl_conf_path'] = \
+        os.path.join(prefix, 'etc', 'handlers')
+    if not os.path.isdir(ctx.runtime_properties['diamond_hdl_conf_path']):
+        os.makedirs(ctx.runtime_properties['diamond_hdl_conf_path'])
+
+
 def config_cloudify_handler(config_path):
     handler_config = {
         'rmq_server': get_manager_ip(),
         'rmq_port': 5672,
-        'rmq_exchange': 'monitoring',
+        'rmq_exchange': 'cloudify-monitoring',
         'rmq_user': '',
         'rmq_password': '',
         'rmq_vhost': '/',

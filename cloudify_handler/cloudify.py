@@ -148,7 +148,9 @@ class CloudifyHandler(Handler):
                 self.channels[rmq_server].exchange_declare(
                     exchange=self.rmq_exchange,
                     type=self.rmq_exchange_type,
-                    durable=self.rmq_durable)
+                    durable=self.rmq_durable,
+                    auto_delete=True,
+                    internal=False)
                 # Reset reconnect_interval after a successful connection
                 self.reconnect_interval = 1
             except Exception as exception:
