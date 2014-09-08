@@ -24,21 +24,23 @@ def install(ctx, **kwargs):
     create_config(ctx)
     disable_all_collectors(ctx.runtime_properties['diamond_col_conf_path'])
 
-    try:
-        collectors = ctx.properties['config']['colletors']
-    except KeyError:
-        collectors = ['CPUCollector', 'MemoryCollector',
-                      'LoadAverageCollector', 'DiskUsageCollector']
+    config = ctx.properties.get('config', {})
+    collectors = config.get('collectors', [])
+    if not collectors:
+        collectors = ['ExampleCollector']
+
+    # collectors = ['CPUCollector', 'MemoryCollector',
+    #               'LoadAverageCollector', 'DiskUsageCollector']
     enable_collectors(ctx.runtime_properties['diamond_col_conf_path'],
                       collectors)
 
     config_cloudify_handler(
         os.path.join(ctx.runtime_properties['diamond_hdl_conf_path'],
                      'CloudifyHandler.conf'))
-    try:
-        if ctx.properties['autostart']:
-            start(ctx)
-    except KeyError:
+
+    if config.get('autostart') is True:
+        start(ctx)
+    else:
         ctx.logger.info('autostart canceled')
 
 
