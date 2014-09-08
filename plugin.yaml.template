@@ -1,0 +1,9 @@
+##################################################################################
+# Cloudify Diamond plugin definition.
+##################################################################################
+
+plugins:
+    diamond:
+        derived_from: cloudify.plugins.agent_plugin
+        properties:
+            url: https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/{{ plugin_branch }}.zip
