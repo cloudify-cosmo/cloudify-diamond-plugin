@@ -8,5 +8,6 @@ setup(
     packages=['diamond_agent', 'cloudify_handler'],
     install_requires=['cloudify-plugins-common==3.1a3',
                       'diamond==3.4.421',
-                      'ConfigObj==5.0.6'],
+                      'ConfigObj==5.0.6',
+                      'psutil==2.1.1'],
 )
