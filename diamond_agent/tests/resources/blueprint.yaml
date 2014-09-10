@@ -5,21 +5,21 @@ plugins:
     diamond:
         derived_from: cloudify.plugins.manager_plugin
 
+inputs:
+    diamond_config: {}
+
 node_types:
     monitor_type:
         derived_from: cloudify.types.base
-        properties:
-            config: {}
 
 node_templates:
     node:
         type: monitor_type
-        properties:
-            config:
-                interval: 10
-                autostart: true
 
         interfaces:
             cloudify.interfaces.monitor_lifecycle:
-                - start: diamond.diamond_agent.tasks.install
-                - stop: diamond.diamond_agent.tasks.stop
+                - start:
+                    mapping: diamond.diamond_agent.tasks.install
+                    properties:
+                        diamond_config: { get_input: diamond_config }
+                - stop: diamond.diamond_agent.tasks.uninstall
