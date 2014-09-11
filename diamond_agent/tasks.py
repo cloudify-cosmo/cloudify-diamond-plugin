@@ -31,6 +31,18 @@ DEFAULT_COLLECTORS = {
     'LoadAverageCollector': {},
     'DiskUsageCollector': {}
 }
+DEFAULT_HANDLERS = {
+    'cloudify_handler.cloudify.CloudifyHandler': {
+        'rmq_server': get_manager_ip(),
+        'rmq_port': 5672,
+        'rmq_exchange': 'cloudify-monitoring',
+        'rmq_user': '',
+        'rmq_password': '',
+        'rmq_vhost': '/',
+        'rmq_exchange_type': 'topic',
+        'rmq_durable': False
+    }
+}
 
 
 @operation
@@ -38,8 +50,8 @@ def install(ctx, diamond_config, **kwargs):
     paths = get_paths(diamond_config.get('prefix'))
     ctx.runtime_properties['diamond_config'] = paths['config']
     host = '.'.join([ctx.node_name, ctx.node_id])
-    # TODO: handlers needs to be customizable as collectors
-    handlers = 'cloudify_handler.cloudify.CloudifyHandler'
+    handlers = config_handlers(diamond_config.get('handlers'),
+                               paths['handlers_config'])
     interval = diamond_config.get('interval', 10)
     create_config(hostname=host,
                   path_prefix=ctx.deployment_id,
@@ -54,7 +66,7 @@ def install(ctx, diamond_config, **kwargs):
 
     disable_all_collectors(paths['collectors_config'])
     config_collectors(ctx,
-                      diamond_config.get('collectors', {}),
+                      diamond_config.get('collectors'),
                       paths['collectors_config'],
                       paths['collectors'])
 
@@ -91,7 +103,7 @@ def stop(pid_path):
 
 
 def config_collectors(ctx, collectors, config_path, collectors_path):
-    if not collectors:
+    if collectors is None:
         collectors = DEFAULT_COLLECTORS
 
     for name, prop in collectors.items():
@@ -105,6 +117,24 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
 def config_collector(name, path, properties):
     full_path = os.path.join(path, name + '.conf')
     config = ConfigObj(infile=full_path)
+    for key, value in properties.items():
+        config[key] = value
+    config.write()
+
+
+def config_handlers(handlers, config_path):
+    if handlers is None:
+        handlers = DEFAULT_HANDLERS
+
+    for name, props in handlers.items():
+        path = os.path.join(config_path, name.split('.')[-1] + '.conf')
+        config_handler(path, props)
+
+    return handlers.keys()
+
+
+def config_handler(path, properties):
+    config = ConfigObj(infile=path)
     for key, value in properties.items():
         config[key] = value
     config.write()
