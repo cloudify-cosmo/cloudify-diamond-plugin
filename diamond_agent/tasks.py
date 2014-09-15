@@ -96,7 +96,7 @@ def install(ctx, diamond_config, **kwargs):
 
 
 @operation
-def uninstall(ctx, diamond_config, **kwargs):
+def uninstall(ctx, **kwargs):
     pid_path = ctx.runtime_properties['diamond_pid_file']
     # letting the workflow engine handle this in case of errors
     # so no try/catch

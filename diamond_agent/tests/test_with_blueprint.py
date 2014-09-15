@@ -1,7 +1,7 @@
 import os
 import unittest
 from tempfile import mkdtemp
-from time import sleep
+import time
 from cloudify.workflows import local
 
 
@@ -18,23 +18,34 @@ class TestWithBlueprint(unittest.TestCase):
                 'prefix': mkdtemp(prefix='cloudify-'),
                 'interval': 1,
                 'collectors': {
-                    'ExampleCollector': {},
+                    'TestCollector': {},
                 },
                 'handlers': {
-                    'diamond.handler.archive.ArchiveHandler': {
-                        'log_file': '/tmp/diamond.log'
-                    }
+                    'test_handler.TestHandler': {}
                 }
             }
         }
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
-        sleep(20)
-        self.assertTrue(True)
+
+        self.check()
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
 
     def _blueprint_path(self):
         return os.path.join(os.path.dirname(__file__),
-                            'resources', 'blueprint.yaml')
+                            'resources',
+                            'blueprint',
+                            'blueprint.yaml')
+
+    def check(self, timeout=10):
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                with open('/tmp/handler_file') as f:
+                    f.write('wrote: {}'.format(metric))
+                return
+            except:
+                time.sleep(1)
+        self.fail()

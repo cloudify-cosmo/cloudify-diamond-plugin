@@ -22,7 +22,4 @@ node_templates:
                     mapping: diamond.diamond_agent.tasks.install
                     properties:
                         diamond_config: { get_input: diamond_config }
-                - stop:
-                    mapping: diamond.diamond_agent.tasks.uninstall
-                    properties:
-                        diamond_config: { get_input: diamond_config }
+                - stop: diamond.diamond_agent.tasks.uninstall
