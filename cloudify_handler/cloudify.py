@@ -204,20 +204,38 @@ class CloudifyHandler(Handler):
         metric_path = metric.host.split('.')
 
         output = {
-            # 'instance': metric_path[1] if metric_path[1:2] else '',
+            # Node instance id
             'node_id': metric_path[1] if metric_path[1:2] else '',
-            # 'node': metric_path[0] if metric_path[0:1] else '',
+
+            # Node id
             'node_name': metric_path[0] if metric_path[0:1] else '',
-            # 'deployment': metric.getPathPrefix(),
+
+            # Deployment id
+            'deployment_id': metric.getPathPrefix(),
+
+            # Metric name (e.g. cpu)
             'name': metric.getCollectorPath(),
+
+            # Sub-metric name (e.g. avg)
             'path': metric.getMetricPath().replace('.', '_'),
-            # 'value': metric.value,
+
+            # The actual metric value
             'metric': float(metric.value),
+
+            # Metric unit
             'unit': '',
+
+            # Metric type (gauge, counter, etc...)
             'type': metric.metric_type,
 
-            'host': 'localhost',
+            # Fixed stub for riemann
+            'host': 'host',
+
+            # The full metric name (
+            # e.g. deployment_id.node_id.node_instance_id.metric)
             'service': metric.path,
+
+            # epoch timestamp of the metric
             'time': metric.timestamp,
         }
         return json.dumps(output)
@@ -233,12 +251,6 @@ class CloudifyHandler(Handler):
                     self._bind(rmq_server)
 
                 channel = self.channels[rmq_server]
-
-                self.log.info('exchange: {}\nrouting_key: {}\nbody: {}'.format(
-                    self.rmq_exchange,
-                    metric.getPathPrefix(),
-                    self.jsonify(metric)))
-
                 channel.basic_publish(exchange=self.rmq_exchange,
                                       routing_key=metric.getPathPrefix(),
                                       body=self.jsonify(metric))

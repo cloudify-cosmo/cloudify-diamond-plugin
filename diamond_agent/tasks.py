@@ -16,12 +16,15 @@
 import os
 import sys
 import glob
+import signal
 from shutil import copytree, copy
 from tempfile import mkdtemp
 from subprocess import call
+
+from configobj import ConfigObj
 from cloudify.decorators import operation
 from cloudify.utils import get_manager_ip
-from configobj import ConfigObj
+from cloudify import exceptions
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
@@ -31,9 +34,11 @@ DEFAULT_COLLECTORS = {
     'LoadAverageCollector': {},
     'DiskUsageCollector': {}
 }
+
+# TODO: get_manager_ip during actual instantiation
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
-        'rmq_server': get_manager_ip(),
+        'rmq_server': 'localhost',
         'rmq_port': 5672,
         'rmq_exchange': 'cloudify-monitoring',
         'rmq_user': '',
@@ -44,15 +49,21 @@ DEFAULT_HANDLERS = {
     }
 }
 
+DEFAULT_INTERVAL = 10
+
 
 @operation
 def install(ctx, diamond_config, **kwargs):
     paths = get_paths(diamond_config.get('prefix'))
-    ctx.runtime_properties['diamond_config'] = paths['config']
+    ctx.runtime_properties['diamond_pid_file'] = os.path.join(paths['pid'],
+                                                              PID_NAME)
     host = '.'.join([ctx.node_name, ctx.node_id])
+
+    # TODO: when handlers and collectors are set,
+    # validate at least one and use NonRecoverableError
     handlers = config_handlers(diamond_config.get('handlers'),
                                paths['handlers_config'])
-    interval = diamond_config.get('interval', 10)
+    interval = diamond_config.get('interval', DEFAULT_INTERVAL)
     create_config(hostname=host,
                   path_prefix=ctx.deployment_id,
                   handlers=handlers,
@@ -70,24 +81,21 @@ def install(ctx, diamond_config, **kwargs):
                       paths['collectors_config'],
                       paths['collectors'])
 
-    config_cloudify_handler(
-        os.path.join(paths['handlers_config'], 'CloudifyHandler.conf'))
+    config_handlers(handlers, paths['handlers_config'])
 
     try:
         start(paths['config'])
     except OSError as e:
-        ctx.logger.info('Starting diamond failed: {}'.format(e))
+        raise exceptions.NonRecoverableError(
+            'Starting diamond failed: {}'.format(e))
 
 
 @operation
-def uninstall(ctx, **kwargs):
-    path = os.path.join(ctx.runtime_properties['diamond_config'], CONFIG_NAME)
-    try:
-        config = ConfigObj(infile=path, file_error=True)
-        pid = config['server']['pid_file']
-        stop(pid)
-    except (OSError, IOError) as e:
-        ctx.logger.info('Stoppign diamond failed: {}'.format(e))
+def uninstall(ctx, diamond_config, **kwargs):
+    pid_path = ctx.runtime_properties['diamond_pid_file']
+    # letting the workflow engine handle this in case of errors
+    # so no try/catch
+    stop(pid_path)
 
 
 def start(conf_path):
@@ -99,7 +107,9 @@ def start(conf_path):
 def stop(pid_path):
     with open(pid_path) as f:
         pid = int(f.read())
-    os.kill(pid, 9)
+
+    # TODO: test with signal.SIGTERM
+    os.kill(pid, signal.SIGKILL)
 
 
 def config_collectors(ctx, collectors, config_path, collectors_path):
@@ -108,8 +118,11 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
 
     for name, prop in collectors.items():
         if 'path' in prop.keys():
-            ctx.download_resource(prop['path'],
-                                  os.path.join(collectors_path, name))
+            collector_dir = os.path.join(collectors_path, name)
+            os.mkdir(collector_dir)
+            collector_file = os.path.join(collector_dir, '{}.py'.format(name))
+            ctx.download_resource(prop['path'], collector_file)
+
         prop.update({'enabled': True})
         config_collector(name, config_path, prop)
 
@@ -177,22 +190,6 @@ def get_paths(prefix):
         if not os.path.exists(path):
             os.makedirs(path)
     return paths
-
-
-def config_cloudify_handler(config_path):
-    handler_config = {
-        'rmq_server': get_manager_ip(),
-        'rmq_port': 5672,
-        'rmq_exchange': 'cloudify-monitoring',
-        'rmq_user': '',
-        'rmq_password': '',
-        'rmq_vhost': '/',
-        'rmq_exchange_type': 'topic',
-        'rmq_durable': False
-    }
-    config = ConfigObj(handler_config, write_empty_values=True)
-    config.filename = config_path
-    config.write()
 
 
 def create_config(hostname, path_prefix, handlers, interval, paths):
