@@ -33,7 +33,7 @@ class TestWithBlueprint(unittest.TestCase):
         self.assertTrue(True)
 
     def _create_env(self, inputs):
-        return local.Environment(self._blueprint_path(), inputs=inputs)
+        return local.init_env(self._blueprint_path(), inputs=inputs)
 
     def _blueprint_path(self):
         return os.path.join(os.path.dirname(__file__),
