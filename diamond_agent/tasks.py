@@ -111,15 +111,8 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
             ctx.download_resource(prop['path'],
                                   os.path.join(collectors_path, name))
         prop.update({'enabled': True})
-        config_collector(name, config_path, prop)
-
-
-def config_collector(name, path, properties):
-    full_path = os.path.join(path, name + '.conf')
-    config = ConfigObj(infile=full_path)
-    for key, value in properties.items():
-        config[key] = value
-    config.write()
+        config_full_path = os.path.join(config_path, name + '.conf')
+        write_config(config_full_path, prop)
 
 
 def config_handlers(handlers, config_path):
@@ -128,12 +121,12 @@ def config_handlers(handlers, config_path):
 
     for name, props in handlers.items():
         path = os.path.join(config_path, name.split('.')[-1] + '.conf')
-        config_handler(path, props)
+        write_config(path, props)
 
     return handlers.keys()
 
 
-def config_handler(path, properties):
+def write_config(path, properties):
     config = ConfigObj(infile=path)
     for key, value in properties.items():
         config[key] = value
