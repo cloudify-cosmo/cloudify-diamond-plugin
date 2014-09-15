@@ -15,8 +15,8 @@
 
 import os
 import sys
-import glob
-import signal
+from glob import glob
+from signal import SIGTERM
 from shutil import copytree, copy
 from tempfile import mkdtemp
 from subprocess import call
@@ -28,6 +28,8 @@ from cloudify import exceptions
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
+DEFAULT_INTERVAL = 10
+
 DEFAULT_COLLECTORS = {
     'CPUCollector': {},
     'MemoryCollector': {},
@@ -35,7 +37,6 @@ DEFAULT_COLLECTORS = {
     'DiskUsageCollector': {}
 }
 
-# TODO: get_manager_ip during actual instantiation
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
         'rmq_server': 'localhost',
@@ -49,20 +50,26 @@ DEFAULT_HANDLERS = {
     }
 }
 
-DEFAULT_INTERVAL = 10
-
 
 @operation
 def install(ctx, diamond_config, **kwargs):
+    """
+
+    :param ctx:
+    :param diamond_config:
+    :param kwargs:
+    :return:
+    """
     paths = get_paths(diamond_config.get('prefix'))
     ctx.runtime_properties['diamond_pid_file'] = os.path.join(paths['pid'],
                                                               PID_NAME)
     host = '.'.join([ctx.node_name, ctx.node_id])
 
-    # TODO: when handlers and collectors are set,
-    # validate at least one and use NonRecoverableError
-    handlers = config_handlers(diamond_config.get('handlers'),
-                               paths['handlers_config'])
+    handlers = config_handlers(ctx,
+                               diamond_config.get('handlers'),
+                               paths['handlers_config'],
+                               paths['handlers'])
+
     interval = diamond_config.get('interval', DEFAULT_INTERVAL)
     create_config(hostname=host,
                   path_prefix=ctx.deployment_id,
@@ -80,8 +87,6 @@ def install(ctx, diamond_config, **kwargs):
                       diamond_config.get('collectors'),
                       paths['collectors_config'],
                       paths['collectors'])
-
-    config_handlers(handlers, paths['handlers_config'])
 
     try:
         start(paths['config'])
@@ -108,13 +113,18 @@ def stop(pid_path):
     with open(pid_path) as f:
         pid = int(f.read())
 
-    # TODO: test with signal.SIGTERM
-    os.kill(pid, signal.SIGKILL)
+    os.kill(pid, SIGTERM)
 
 
 def config_collectors(ctx, collectors, config_path, collectors_path):
+    """
+    create collectors configuration files.
+    copy over collector if path to file was provided
+    """
     if collectors is None:
         collectors = DEFAULT_COLLECTORS
+    elif not collectors:
+        raise exceptions.NonRecoverableError('Empty collectors dict')
 
     for name, prop in collectors.items():
         if 'path' in prop.keys():
@@ -124,22 +134,38 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
             ctx.download_resource(prop['path'], collector_file)
 
         prop.update({'enabled': True})
-        config_full_path = os.path.join(config_path, name + '.conf')
+        config_full_path = os.path.join(config_path, '{}.conf'.format(name))
         write_config(config_full_path, prop)
 
 
-def config_handlers(handlers, config_path):
+def config_handlers(ctx, handlers, config_path, handlers_path):
+    """
+    create handler configuration files.
+    copy over handler if path to file was provided.
+    return list of active handlers.
+    """
     if handlers is None:
         handlers = DEFAULT_HANDLERS
+        handlers['rmq_server'] = get_manager_ip()
+    elif not handlers:
+        raise exceptions.NonRecoverableError('Empty handlers dict')
 
-    for name, props in handlers.items():
-        path = os.path.join(config_path, name.split('.')[-1] + '.conf')
-        write_config(path, props)
+    for name, prop in handlers.items():
+        if 'path' in prop.keys():
+            handler_file = os.path.join(handlers_path, '{}.py'.format(name))
+            ctx.download_resource(prop['path'], handler_file)
+
+        path = os.path.join(config_path, '{}.conf'.format(name.split('.')[-1]))
+        write_config(path, prop)
 
     return handlers.keys()
 
 
 def write_config(path, properties):
+    """
+    write config file to path with properties. if file exists, properties
+    will be appended
+    """
     config = ConfigObj(infile=path)
     for key, value in properties.items():
         config[key] = value
@@ -150,7 +176,7 @@ def disable_all_collectors(path):
     """
     disables all collectors which configs are located at path
     """
-    files = glob.glob(os.path.join(path, '*.conf'))
+    files = glob(os.path.join(path, '*.conf'))
     for path in files:
         disable_collector(path)
 
@@ -244,6 +270,10 @@ def create_config(hostname, path_prefix, handlers, interval, paths):
 
 
 def copy_content(src, dest):
+    """
+    copy content of src folder into dest dir. content can be files
+    or folders
+    """
     for item in os.listdir(src):
         full_path = os.path.join(src, item)
         if os.path.isdir(full_path):
