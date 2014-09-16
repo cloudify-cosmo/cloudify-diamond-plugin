@@ -20,4 +20,4 @@ class TestHandler(Handler):
 
     def process(self, metric):
         with open(self.config['log_path'], 'a') as f:
-            f.write('wrote: {}'.format(metric))
+            f.write('{}\n'.format(metric))
