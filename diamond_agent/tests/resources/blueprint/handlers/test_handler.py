@@ -14,9 +14,6 @@
 #  * limitations under the License.
 
 
-from json
-
-
 from diamond.handler.Handler import Handler
 
 
