@@ -13,11 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+
+from json
+
+
 from diamond.handler.Handler import Handler
 
 
 class TestHandler(Handler):
 
     def process(self, metric):
-        with open('/tmp/handler_file', 'w') as f:
+        with open(self.config['log_path'], 'a') as f:
             f.write('wrote: {}'.format(metric))
