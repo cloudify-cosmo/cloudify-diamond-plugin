@@ -146,7 +146,8 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     """
     if handlers is None:
         handlers = DEFAULT_HANDLERS
-        handlers['rmq_server'] = get_manager_ip()
+        handlers['cloudify_handler.cloudify.CloudifyHandler'][
+            'rmq_server'] = get_manager_ip()
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
