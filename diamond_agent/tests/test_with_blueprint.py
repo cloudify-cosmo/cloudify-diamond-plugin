@@ -22,12 +22,14 @@ class TestWithBlueprint(unittest.TestCase):
                         'path': self._get_resource_path(
                             'blueprint', 'collectors', 'test.py'
                         ),
+                        'config': {},
                     },
                 },
                 'handlers': {
                     'test_handler.TestHandler': {
                         'path': self._get_resource_path(
                             'blueprint', 'handlers', 'test_handler.py'),
+                        'config': {}
                     }
                 }
             }

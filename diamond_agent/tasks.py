@@ -39,14 +39,16 @@ DEFAULT_COLLECTORS = {
 
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
-        'rmq_server': 'localhost',
-        'rmq_port': 5672,
-        'rmq_exchange': 'cloudify-monitoring',
-        'rmq_user': '',
-        'rmq_password': '',
-        'rmq_vhost': '/',
-        'rmq_exchange_type': 'topic',
-        'rmq_durable': False
+        'config': {
+            'rmq_server': 'localhost',
+            'rmq_port': 5672,
+            'rmq_exchange': 'cloudify-monitoring',
+            'rmq_user': '',
+            'rmq_password': '',
+            'rmq_vhost': '/',
+            'rmq_exchange_type': 'topic',
+            'rmq_durable': False
+        }
     }
 }
 
@@ -133,9 +135,9 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
             collector_file = os.path.join(collector_dir, '{}.py'.format(name))
             ctx.download_resource(prop['path'], collector_file)
 
-        prop.update({'enabled': True})
+        prop['config'].update({'enabled': True})
         config_full_path = os.path.join(config_path, '{}.conf'.format(name))
-        write_config(config_full_path, prop)
+        write_config(config_full_path, prop.get('config', {}))
 
 
 def config_handlers(ctx, handlers, config_path, handlers_path):
@@ -158,7 +160,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
             ctx.download_resource(prop['path'], handler_file)
 
         path = os.path.join(config_path, '{}.conf'.format(name.split('.')[-1]))
-        write_config(path, prop)
+        write_config(path, prop.get('config', {}))
 
     return handlers.keys()
 
