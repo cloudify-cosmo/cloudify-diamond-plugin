@@ -153,7 +153,8 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
 
     for name, prop in handlers.items():
         if 'path' in prop.keys():
-            handler_file = os.path.join(handlers_path, '{}.py'.format(name))
+            handler_file = os.path.join(handlers_path,
+                                        '{}.py'.format(name.split('.')[-2]))
             ctx.download_resource(prop['path'], handler_file)
 
         path = os.path.join(config_path, '{}.conf'.format(name.split('.')[-1]))

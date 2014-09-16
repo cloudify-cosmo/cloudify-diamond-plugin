@@ -18,13 +18,21 @@ class TestWithBlueprint(unittest.TestCase):
                 'prefix': mkdtemp(prefix='cloudify-'),
                 'interval': 1,
                 'collectors': {
-                    'TestCollector': {},
+                    'TestCollector': {
+                        'path': self._get_resource_path(
+                            'blueprint', 'collectors', 'test.py'
+                        ),
+                    },
                 },
                 'handlers': {
-                    'test_handler.TestHandler': {}
+                    'test_handler.TestHandler': {
+                        'path': self._get_resource_path(
+                            'blueprint', 'handlers', 'test_handler.py'),
+                    }
                 }
             }
         }
+        print inputs['diamond_config']['prefix']
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
 
@@ -34,17 +42,16 @@ class TestWithBlueprint(unittest.TestCase):
         return local.init_env(self._blueprint_path(), inputs=inputs)
 
     def _blueprint_path(self):
-        return os.path.join(os.path.dirname(__file__),
-                            'resources',
-                            'blueprint',
-                            'blueprint.yaml')
+        return self._get_resource_path('blueprint', 'blueprint.yaml')
 
-    def check(self, timeout=10):
+    def _get_resource_path(self, *args):
+        return os.path.join(os.path.dirname(__file__), 'resources', *args)
+
+    def check(self, timeout=5):
         end = time.time() + timeout
         while time.time() < end:
             try:
-                with open('/tmp/handler_file') as f:
-                    f.write('wrote: {}'.format(metric))
+                open('/tmp/handler_file')
                 return
             except:
                 time.sleep(1)
