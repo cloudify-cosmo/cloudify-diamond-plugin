@@ -135,7 +135,9 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
             collector_file = os.path.join(collector_dir, '{}.py'.format(name))
             ctx.download_resource(prop['path'], collector_file)
 
-        prop['config'].update({'enabled': True})
+        config = prop.get('config', {})
+        config.update({'enabled': True})
+        prop['config'] = config
         config_full_path = os.path.join(config_path, '{}.conf'.format(name))
         write_config(config_full_path, prop.get('config', {}))
 
