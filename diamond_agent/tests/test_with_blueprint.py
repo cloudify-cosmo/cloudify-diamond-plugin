@@ -21,16 +21,13 @@ class TestWithBlueprint(unittest.TestCase):
                 'interval': 1,
                 'collectors': {
                     'TestCollector': {
-                        'path': self._get_resource_path(
-                            'blueprint', 'collectors', 'test.py'
-                        ),
+                        'path': 'collectors/test.py',
                         'config': {},
                     },
                 },
                 'handlers': {
                     'test_handler.TestHandler': {
-                        'path': self._get_resource_path(
-                            'blueprint', 'handlers', 'test_handler.py'),
+                        'path': 'handlers/test_handler.py',
                         'config': {
                             'log_path': log_path,
                         }
