@@ -1,7 +1,8 @@
 import os
-import unittest
-from tempfile import mkdtemp
 import time
+import unittest
+import tempfile
+
 from cloudify.workflows import local
 
 
@@ -13,9 +14,10 @@ class TestWithBlueprint(unittest.TestCase):
         self.env.execute('uninstall', task_retries=0)
 
     def test_custom_collectors(self):
+        log_path = os.path.join(tempfile.gettempdir(), str(time.time()))
         inputs = {
             'diamond_config': {
-                'prefix': mkdtemp(prefix='cloudify-'),
+                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
                 'interval': 1,
                 'collectors': {
                     'TestCollector': {
@@ -29,16 +31,19 @@ class TestWithBlueprint(unittest.TestCase):
                     'test_handler.TestHandler': {
                         'path': self._get_resource_path(
                             'blueprint', 'handlers', 'test_handler.py'),
-                        'config': {}
+                        'config': {
+                            'log_path': log_path,
+                        }
                     }
                 }
             }
         }
         print inputs['diamond_config']['prefix']
+        print log_path
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
 
-        self.check()
+        self.check(log_path)
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
@@ -49,11 +54,11 @@ class TestWithBlueprint(unittest.TestCase):
     def _get_resource_path(self, *args):
         return os.path.join(os.path.dirname(__file__), 'resources', *args)
 
-    def check(self, timeout=5):
+    def check(self, path, timeout=5):
         end = time.time() + timeout
         while time.time() < end:
             try:
-                open('/tmp/handler_file')
+                open(path)
                 return
             except:
                 time.sleep(1)
