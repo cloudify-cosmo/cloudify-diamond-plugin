@@ -13,12 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
+import cPickle
 from diamond.handler.Handler import Handler
 
 
 class TestHandler(Handler):
 
     def process(self, metric):
-        with open(self.config['log_path'], 'a') as f:
-            f.write('{}\n'.format(metric))
+        with open(self.config['log_path'], 'w') as f:
+            cPickle.dump(metric, f)

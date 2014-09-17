@@ -1,5 +1,8 @@
 import os
 import time
+import string
+import random
+import cPickle
 import unittest
 import tempfile
 
@@ -16,7 +19,7 @@ class TestWithBlueprint(unittest.TestCase):
             self.env.execute('uninstall', task_retries=0)
 
     def test_custom_collectors(self):
-        log_path = os.path.join(tempfile.gettempdir(), str(time.time()))
+        log_path = os.path.join(tempfile.gettempdir(), id_generator())
         inputs = {
             'diamond_config': {
                 'prefix': tempfile.mkdtemp(prefix='cloudify-'),
@@ -24,7 +27,10 @@ class TestWithBlueprint(unittest.TestCase):
                 'collectors': {
                     'TestCollector': {
                         'path': 'collectors/test.py',
-                        'config': {},
+                        'config': {
+                            'name': 'metric',
+                            'value': 42,
+                        },
                     },
                 },
                 'handlers': {
@@ -42,7 +48,18 @@ class TestWithBlueprint(unittest.TestCase):
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
 
-        self.check(log_path)
+        metric = self.get_metric_instance(log_path)
+        collector_config = \
+            inputs['diamond_config']['collectors']['TestCollector']['config']
+
+        self.assertEqual(collector_config['name'], metric.getMetricPath())
+        self.assertEqual(collector_config['value'], metric.value)
+        self.assertEqual(self.env.name, metric.getPathPrefix())
+        self.assertEqual('TestCollector', metric.getCollectorPath())
+        self.assertEqual(self.env.plan['nodes'][0]['id'],
+                         metric.host.split('.')[0])
+        self.assertEqual(self.env.plan['node_instances'][0]['id'],
+                         metric.host.split('.')[1])
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
@@ -53,12 +70,16 @@ class TestWithBlueprint(unittest.TestCase):
     def _get_resource_path(self, *args):
         return os.path.join(os.path.dirname(__file__), 'resources', *args)
 
-    def check(self, path, timeout=5):
+    def get_metric_instance(self, path, timeout=5):
         end = time.time() + timeout
         while time.time() < end:
             try:
-                open(path)
-                return
-            except:
+                with open(path) as fh:
+                    return cPickle.load(fh)
+            except IOError:
                 time.sleep(1)
         self.fail()
+
+
+def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))

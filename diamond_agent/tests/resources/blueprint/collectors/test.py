@@ -18,9 +18,6 @@ import diamond.collector
 
 class TestCollector(diamond.collector.Collector):
     def collect(self):
-        """
-        Overrides the Collector.collect method
-        """
-        metric_name = self.config['name']
-        metric_value = self.config['value']
+        metric_name = self.config.get('name', 'default')
+        metric_value = self.config.get('value', -1)
         self.publish(metric_name, metric_value)
