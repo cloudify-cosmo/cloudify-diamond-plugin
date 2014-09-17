@@ -9,9 +9,11 @@ from cloudify.workflows import local
 class TestWithBlueprint(unittest.TestCase):
     def setUp(self):
         os.environ['MANAGEMENT_IP'] = '127.0.0.1'
+        self.env = None
 
     def tearDown(self):
-        self.env.execute('uninstall', task_retries=0)
+        if self.env:
+            self.env.execute('uninstall', task_retries=0)
 
     def test_custom_collectors(self):
         log_path = os.path.join(tempfile.gettempdir(), str(time.time()))
