@@ -59,24 +59,24 @@ class TestWithBlueprint(unittest.TestCase):
 
     @unittest.SkipTest
     def test_default_collectors(self):
-        log_path = tempfile.mktemp()
-        inputs = {
-            'diamond_config': {
-                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
-                'interval': 1,
-                'collectors': {},
-                'handlers': {
-                    'test_handler.TestHandler': {
-                        'path': 'handlers/test_handler.py',
-                        'config': {
-                            'log_path': log_path,
-                            }
-                    }
-                }
-            }
-        }
-        fh = self.get_file_handler(log_path)
-
+        pass  # comment for flake8
+        # log_path = tempfile.mktemp()
+        # inputs = {
+        #     'diamond_config': {
+        #         'prefix': tempfile.mkdtemp(prefix='cloudify-'),
+        #         'interval': 1,
+        #         'collectors': {},
+        #         'handlers': {
+        #             'test_handler.TestHandler': {
+        #                 'path': 'handlers/test_handler.py',
+        #                 'config': {
+        #                     'log_path': log_path,
+        #                     }
+        #             }
+        #         }
+        #     }
+        # }
+        # fh = self.get_file_handler(log_path)
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
