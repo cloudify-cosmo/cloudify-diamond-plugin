@@ -1,11 +1,12 @@
 tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
-    - http://www.getcloudify.org/spec/cloudify/3.1/types.yaml
+    - https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/types/types.yaml
 
 plugins:
     diamond:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
 
 inputs:
     diamond_config: {}

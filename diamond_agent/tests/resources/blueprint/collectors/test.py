@@ -13,21 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
 import diamond.collector
 
 
 class TestCollector(diamond.collector.Collector):
-
     def collect(self):
-        """
-        Overrides the Collector.collect method
-        """
-
-        # Set Metric Name
-        metric_name = "my.example.metric"
-        # Set Metric Value
-        metric_value = 43
-
-        # Publish Metric
+        metric_name = self.config.get('name', 'default')
+        metric_value = self.config.get('value', -1)
         self.publish(metric_name, metric_value)
