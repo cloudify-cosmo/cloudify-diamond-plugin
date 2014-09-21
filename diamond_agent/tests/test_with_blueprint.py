@@ -57,8 +57,26 @@ class TestWithBlueprint(unittest.TestCase):
         self.assertEqual(self.env.plan['node_instances'][0]['id'],
                          metric.host.split('.')[1])
 
+    @unittest.SkipTest
     def test_default_collectors(self):
-        pass
+        log_path = tempfile.mktemp()
+        inputs = {
+            'diamond_config': {
+                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
+                'interval': 1,
+                'collectors': {},
+                'handlers': {
+                    'test_handler.TestHandler': {
+                        'path': 'handlers/test_handler.py',
+                        'config': {
+                            'log_path': log_path,
+                            }
+                    }
+                }
+            }
+        }
+        fh = self.get_file_handler(log_path)
+
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
@@ -75,6 +93,16 @@ class TestWithBlueprint(unittest.TestCase):
             try:
                 with open(path) as fh:
                     return cPickle.load(fh)
+            except IOError:
+                time.sleep(1)
+        self.fail()
+
+    def get_file_handler(self, path, timeout=5):
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                with open(path) as fh:
+                    return fh
             except IOError:
                 time.sleep(1)
         self.fail()
