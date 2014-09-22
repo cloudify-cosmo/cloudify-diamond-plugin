@@ -4,6 +4,8 @@ import cPickle
 import unittest
 import tempfile
 
+import psutil
+
 from cloudify.workflows import local
 
 
@@ -13,8 +15,9 @@ class TestWithBlueprint(unittest.TestCase):
         self.env = None
 
     def tearDown(self):
-        if self.env:
-            self.env.execute('uninstall', task_retries=0)
+        pass
+        # if self.env:
+        #     self.env.execute('uninstall', task_retries=0)
 
     def test_custom_collectors(self):
         log_path = tempfile.mktemp()
@@ -44,7 +47,12 @@ class TestWithBlueprint(unittest.TestCase):
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
 
-        metric = self.get_metric_instance(log_path)
+        if not is_created(log_path):
+            self.fail('file {} expected, but not found!'.format(log_path))
+
+        with open(log_path, 'r') as fh:
+            metric = cPickle.load(fh)
+
         collector_config = \
             inputs['diamond_config']['collectors']['TestCollector']['config']
 
@@ -57,26 +65,66 @@ class TestWithBlueprint(unittest.TestCase):
         self.assertEqual(self.env.plan['node_instances'][0]['id'],
                          metric.host.split('.')[1])
 
-    @unittest.SkipTest
     def test_default_collectors(self):
-        pass  # comment for flake8
-        # log_path = tempfile.mktemp()
-        # inputs = {
-        #     'diamond_config': {
-        #         'prefix': tempfile.mkdtemp(prefix='cloudify-'),
-        #         'interval': 1,
-        #         'collectors': {},
-        #         'handlers': {
-        #             'test_handler.TestHandler': {
-        #                 'path': 'handlers/test_handler.py',
-        #                 'config': {
-        #                     'log_path': log_path,
-        #                     }
-        #             }
-        #         }
-        #     }
-        # }
-        # fh = self.get_file_handler(log_path)
+        log_path = tempfile.mktemp()
+        inputs = {
+            'diamond_config': {
+                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
+                'interval': 1,
+                'handlers': {
+                    'test_handler.TestHandler': {
+                        'path': 'handlers/test_handler.py',
+                        'config': {
+                            'log_path': log_path,
+                            }
+                    }
+                }
+            }
+        }
+        self.env = self._create_env(inputs)
+        self.env.execute('install', task_retries=0)
+
+        if not is_created(log_path):
+            self.fail('file {} expected, but not found!'.format(log_path))
+
+        default_collectors = 'cpu memory loadavg iostat'.split()
+        for _ in range(5):
+            for collector in default_collectors:
+                if not collector_in_log(log_path, collector):
+                    time.sleep(1)
+                    break
+            else:
+                break
+        else:
+            self.fail('default collector not found')
+
+    def test_uninstall_workflow(self):
+        inputs = {
+            'diamond_config': {
+                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
+                'interval': 1,
+                'handlers': {
+                    'diamond.handler.archive.ArchiveHandler': {
+                        'config': {
+                            'log_file': tempfile.mktemp(),
+                        }
+                    }
+                }
+            }
+        }
+        self.env = self._create_env(inputs)
+        self.env.execute('install', task_retries=0)
+        pid_file = os.path.join(inputs['diamond_config']['prefix'],
+                                'var', 'run', 'diamond.pid')
+        with open(pid_file, 'r') as pf:
+            pid = int(pf.read())
+
+        if psutil.pid_exists(pid):
+            self.env.execute('uninstall', task_retries=0)
+            time.sleep(3)
+        else:
+            self.fail('diamond process not running')
+        self.assertFalse(psutil.pid_exists(pid))
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
@@ -87,22 +135,21 @@ class TestWithBlueprint(unittest.TestCase):
     def _get_resource_path(self, *args):
         return os.path.join(os.path.dirname(__file__), 'resources', *args)
 
-    def get_metric_instance(self, path, timeout=5):
-        end = time.time() + timeout
-        while time.time() < end:
-            try:
-                with open(path) as fh:
-                    return cPickle.load(fh)
-            except IOError:
-                time.sleep(1)
-        self.fail()
 
-    def get_file_handler(self, path, timeout=5):
-        end = time.time() + timeout
-        while time.time() < end:
-            try:
-                with open(path) as fh:
-                    return fh
-            except IOError:
-                time.sleep(1)
-        self.fail()
+def collector_in_log(path, collector):
+    with open(path, 'r') as fh:
+        try:
+            while True:
+                metric = cPickle.load(fh)
+                if metric.getCollectorPath() == collector:
+                    return True
+        except EOFError:
+            return False
+
+
+def is_created(path, timeout=5):
+    for _ in range(timeout):
+        if os.path.isfile(path):
+            return True
+        time.sleep(1)
+    return False

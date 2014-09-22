@@ -20,5 +20,5 @@ from diamond.handler.Handler import Handler
 class TestHandler(Handler):
 
     def process(self, metric):
-        with open(self.config['log_path'], 'w') as f:
+        with open(self.config['log_path'], 'a') as f:
             cPickle.dump(metric, f)
