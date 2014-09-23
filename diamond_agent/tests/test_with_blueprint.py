@@ -15,9 +15,8 @@ class TestWithBlueprint(unittest.TestCase):
         self.env = None
 
     def tearDown(self):
-        pass
-        # if self.env:
-        #     self.env.execute('uninstall', task_retries=0)
+        if self.env:
+            self.env.execute('uninstall', task_retries=0)
 
     def test_custom_collectors(self):
         log_path = tempfile.mktemp()
