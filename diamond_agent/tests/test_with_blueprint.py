@@ -76,7 +76,7 @@ class TestWithBlueprint(unittest.TestCase):
                         'path': 'handlers/test_handler.py',
                         'config': {
                             'log_path': log_path,
-                            }
+                        },
                     }
                 }
             }
@@ -125,6 +125,26 @@ class TestWithBlueprint(unittest.TestCase):
         else:
             self.fail('diamond process not running')
         self.assertFalse(psutil.pid_exists(pid))
+
+    def test_empty_collectors(self):
+        inputs = {
+            'diamond_config': {
+                'collectors': {},
+            }
+        }
+        self.env = self._create_env(inputs)
+        with self.assertRaisesRegexp(RuntimeError, 'Empty collectors dict'):
+            self.env.execute('install', task_retries=0)
+
+    def test_empty_handlers(self):
+        inputs = {
+            'diamond_config': {
+                'handlers': {},
+            }
+        }
+        self.env = self._create_env(inputs)
+        with self.assertRaisesRegexp(RuntimeError, 'Empty handlers dict'):
+            self.env.execute('install', task_retries=0)
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(), inputs=inputs)
