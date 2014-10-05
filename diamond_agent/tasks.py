@@ -15,6 +15,7 @@
 
 import os
 import sys
+import copy as copy_objects
 from glob import glob
 from signal import SIGTERM
 from shutil import copytree, copy
@@ -149,8 +150,8 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     return list of active handlers.
     """
     if handlers is None:
-        handlers = DEFAULT_HANDLERS
-        handlers['cloudify_handler.cloudify.CloudifyHandler'][
+        handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
+        handlers['cloudify_handler.cloudify.CloudifyHandler']['config'][
             'rmq_server'] = get_manager_ip()
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
