@@ -15,7 +15,6 @@
 
 import os
 import sys
-from copy import copy as objcopy
 from glob import glob
 from time import sleep
 from signal import SIGTERM
@@ -23,7 +22,9 @@ from shutil import copytree, copy
 from tempfile import mkdtemp
 from subprocess import call
 
+from psutil import pid_exists
 from configobj import ConfigObj
+
 from cloudify.decorators import operation
 from cloudify.utils import get_manager_ip
 from cloudify import exceptions
@@ -31,13 +32,6 @@ from cloudify import exceptions
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
 DEFAULT_INTERVAL = 10
-
-DEFAULT_COLLECTORS = {
-    'CPUCollector': {},
-    'MemoryCollector': {},
-    'LoadAverageCollector': {},
-    'DiskUsageCollector': {}
-}
 
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
@@ -96,11 +90,10 @@ def start(ctx, **kwargs):
 
 @operation
 def stop(ctx, **kwargs):
-    pid_path = os.path.join(ctx.runtime_properties['diamond_paths']['pid'],
-                            PID_NAME)
+    conf_path = ctx.runtime_properties['diamond_paths']['config']
     # letting the workflow engine handle this in case of errors
     # so no try/catch
-    stop_diamond(pid_path)
+    stop_diamond(conf_path)
 
 
 @operation
@@ -113,9 +106,7 @@ def add_collectors(ctx, collectors_config, **kwargs):
                       paths['collectors_config'],
                       paths['collectors'])
 
-    stop_diamond(os.path.join(paths['pid'], PID_NAME))
-    sleep(5)
-    start_diamond(paths['config'])
+    restart_diamond(paths['config'])
 
 
 @operation
@@ -124,16 +115,35 @@ def del_collectors(ctx, collectors_config, **kwargs):
 
 
 def start_diamond(conf_path):
-    cmd = 'diamond --configfile {}'.format(os.path.join(conf_path,
-                                                        CONFIG_NAME))
-    call(cmd.split())
+    config_file = os.path.join(conf_path, CONFIG_NAME)
+    if not os.path.isfile(config_file):
+        raise exceptions.NonRecoverableError("Config file doesn't exists")
+
+    cmd = 'diamond --configfile {0}'.format(config_file)
+    return_code = call(cmd.split())
+    if return_code != 0:
+        raise exceptions.NonRecoverableError('Diamond agent failed to start')
 
 
-def stop_diamond(pid_path):
+def stop_diamond(conf_path):
+    config_file = os.path.join(conf_path, CONFIG_NAME)
+    config = ConfigObj(infile=config_file, raise_errors=True)
+    pid_path = config['server']['pid_file']
     with open(pid_path) as f:
         pid = int(f.read())
 
     os.kill(pid, SIGTERM)
+
+    for _ in range(10):
+        if not pid_exists(pid):
+            return
+        sleep(1)
+    raise exceptions.NonRecoverableError("Diamond couldn't be killed")
+
+
+def restart_diamond(conf_dir):
+    stop_diamond(conf_dir)
+    start_diamond(conf_dir)
 
 
 def config_collectors(ctx, collectors, config_path, collectors_path):

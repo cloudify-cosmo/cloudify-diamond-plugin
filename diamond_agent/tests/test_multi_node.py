@@ -6,6 +6,7 @@ import tempfile
 
 from cloudify.workflows import local
 
+
 class TestMultiNode(unittest.TestCase):
     def setUp(self):
         os.environ['MANAGEMENT_IP'] = '127.0.0.1'
