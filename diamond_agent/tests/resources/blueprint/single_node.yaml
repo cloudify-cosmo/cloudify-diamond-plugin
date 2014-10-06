@@ -1,0 +1,36 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/types/types.yaml
+
+plugins:
+    diamond:
+        executor: central_deployment_agent
+        install: false
+
+inputs:
+    diamond_config: {}
+    collectors_config: {}
+
+node_templates:
+    node:
+        type: cloudify.types.host
+        properties:
+            install_agent: false
+        interfaces:
+            cloudify.interfaces.monitor_lifecycle:
+                - install:
+                    mapping: diamond.diamond_agent.tasks.install
+                    properties:
+                        diamond_config: { get_input: diamond_config }
+                - start: diamond.diamond_agent.tasks.start
+                - add:
+                    mapping: diamond.diamond_agent.tasks.add_collectors
+                    properties:
+                        collectors_config: { get_input: collectors_config }
+                - remove:
+                    mapping: diamond.diamond_agent.tasks.del_collectors
+                    properties:
+                        collectors_config: { get_input: collectors_config }
+                - stop: diamond.diamond_agent.tasks.stop
+                - uninstall: diamond.diamond_agent.tasks.uninstall

@@ -15,7 +15,9 @@
 
 import os
 import sys
+from copy import copy as objcopy
 from glob import glob
+from time import sleep
 from signal import SIGTERM
 from shutil import copytree, copy
 from tempfile import mkdtemp
@@ -55,17 +57,8 @@ DEFAULT_HANDLERS = {
 
 @operation
 def install(ctx, diamond_config, **kwargs):
-    """
-
-    :param ctx:
-    :param diamond_config:
-    :param kwargs:
-    :return:
-    """
     paths = get_paths(diamond_config.get('prefix'))
-    ctx.runtime_properties['diamond_pid_file'] = os.path.join(paths['pid'],
-                                                              PID_NAME)
-    host = '.'.join([ctx.node_name, ctx.node_id])
+    ctx.runtime_properties['diamond_paths'] = paths
 
     handlers = config_handlers(ctx,
                                diamond_config.get('handlers'),
@@ -73,8 +66,7 @@ def install(ctx, diamond_config, **kwargs):
                                paths['handlers'])
 
     interval = diamond_config.get('interval', DEFAULT_INTERVAL)
-    create_config(hostname=host,
-                  path_prefix=ctx.deployment_id,
+    create_config(path_prefix=ctx.deployment_id,
                   handlers=handlers,
                   interval=interval,
                   paths=paths)
@@ -85,33 +77,59 @@ def install(ctx, diamond_config, **kwargs):
                  paths['collectors_config'])
 
     disable_all_collectors(paths['collectors_config'])
-    config_collectors(ctx,
-                      diamond_config.get('collectors'),
-                      paths['collectors_config'],
-                      paths['collectors'])
 
+
+@operation
+def uninstall(ctx, **kwargs):
+    pass
+
+
+@operation
+def start(ctx, **kwargs):
+    paths = ctx.runtime_properties['diamond_paths']
     try:
-        start(paths['config'])
+        start_diamond(paths['config'])
     except OSError as e:
         raise exceptions.NonRecoverableError(
             'Starting diamond failed: {}'.format(e))
 
 
 @operation
-def uninstall(ctx, **kwargs):
-    pid_path = ctx.runtime_properties['diamond_pid_file']
+def stop(ctx, **kwargs):
+    pid_path = os.path.join(ctx.runtime_properties['diamond_paths']['pid'],
+                            PID_NAME)
     # letting the workflow engine handle this in case of errors
     # so no try/catch
-    stop(pid_path)
+    stop_diamond(pid_path)
 
 
-def start(conf_path):
+@operation
+def add_collectors(ctx, collectors_config, **kwargs):
+    _ctx = get_host_ctx(ctx)
+    paths = _ctx.runtime_properties['diamond_paths']
+
+    config_collectors(ctx,
+                      collectors_config,
+                      paths['collectors_config'],
+                      paths['collectors'])
+
+    stop_diamond(os.path.join(paths['pid'], PID_NAME))
+    sleep(5)
+    start_diamond(paths['config'])
+
+
+@operation
+def del_collectors(ctx, collectors_config, **kwargs):
+    pass
+
+
+def start_diamond(conf_path):
     cmd = 'diamond --configfile {}'.format(os.path.join(conf_path,
                                                         CONFIG_NAME))
     call(cmd.split())
 
 
-def stop(pid_path):
+def stop_diamond(pid_path):
     with open(pid_path) as f:
         pid = int(f.read())
 
@@ -123,11 +141,6 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
     create collectors configuration files.
     copy over collector if path to file was provided
     """
-    if collectors is None:
-        collectors = DEFAULT_COLLECTORS
-    elif not collectors:
-        raise exceptions.NonRecoverableError('Empty collectors dict')
-
     for name, prop in collectors.items():
         if 'path' in prop.keys():
             collector_dir = os.path.join(collectors_path, name)
@@ -136,7 +149,9 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
             ctx.download_resource(prop['path'], collector_file)
 
         config = prop.get('config', {})
-        config.update({'enabled': True})
+        config.update({'enabled': True,
+                       'hostname': ctx.node_name,
+                       'path_suffix': ctx.node_id})
         prop['config'] = config
         config_full_path = os.path.join(config_path, '{}.conf'.format(name))
         write_config(config_full_path, prop.get('config', {}))
@@ -150,8 +165,8 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     """
     if handlers is None:
         handlers = DEFAULT_HANDLERS
-        handlers['cloudify_handler.cloudify.CloudifyHandler'][
-            'rmq_server'] = get_manager_ip()
+        handlers['cloudify_handler.cloudify.CloudifyHandler']['rmq_server'] = \
+            get_manager_ip()
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
@@ -217,7 +232,10 @@ def get_paths(prefix):
     return paths
 
 
-def create_config(hostname, path_prefix, handlers, interval, paths):
+def create_config(path_prefix,
+                  handlers,
+                  interval,
+                  paths):
     """
     Creates main diamond configuration file
     """
@@ -239,7 +257,7 @@ def create_config(hostname, path_prefix, handlers, interval, paths):
         },
         'collectors': {
             'default': {
-                'hostname': hostname,
+                'hostname': None,
                 'path_prefix': path_prefix,
                 'interval': interval,
             },
@@ -286,3 +304,13 @@ def copy_content(src, dest):
             copytree(full_path, os.path.join(dest, item))
         else:
             copy(full_path, dest)
+
+
+def get_host_ctx(ctx):
+    """
+    helper method ..
+    """
+    ctx._get_node_instance_if_needed()
+    host_id = ctx._node_instance.host_id
+    host_node_instance = ctx._endpoint.get_node_instance(host_id)
+    return host_node_instance
