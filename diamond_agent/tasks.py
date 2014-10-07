@@ -18,7 +18,7 @@ import sys
 from glob import glob
 from time import sleep
 from signal import SIGTERM
-from shutil import copytree, copy
+from shutil import copytree, copy, rmtree
 from tempfile import mkdtemp
 from subprocess import call
 
@@ -101,7 +101,7 @@ def add_collectors(ctx, collectors_config, **kwargs):
     _ctx = get_host_ctx(ctx)
     paths = _ctx.runtime_properties['diamond_paths']
 
-    config_collectors(ctx,
+    enable_collectors(ctx,
                       collectors_config,
                       paths['collectors_config'],
                       paths['collectors'])
@@ -111,7 +111,14 @@ def add_collectors(ctx, collectors_config, **kwargs):
 
 @operation
 def del_collectors(ctx, collectors_config, **kwargs):
-    pass
+    _ctx = get_host_ctx(ctx)
+    paths = _ctx.runtime_properties['diamond_paths']
+
+    disable_collectors(ctx, collectors_config,
+                       paths['collectors_config'],
+                       paths['collectors'])
+
+    restart_diamond(paths['config'])
 
 
 def start_diamond(conf_path):
@@ -146,11 +153,7 @@ def restart_diamond(conf_dir):
     start_diamond(conf_dir)
 
 
-def config_collectors(ctx, collectors, config_path, collectors_path):
-    """
-    create collectors configuration files.
-    copy over collector if path to file was provided
-    """
+def enable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
         if 'path' in prop.keys():
             collector_dir = os.path.join(collectors_path, name)
@@ -165,6 +168,23 @@ def config_collectors(ctx, collectors, config_path, collectors_path):
         prop['config'] = config
         config_full_path = os.path.join(config_path, '{}.conf'.format(name))
         write_config(config_full_path, prop.get('config', {}))
+
+
+def disable_collectors(ctx, collectors, config_path, collectors_path):
+    for name, prop in collectors.items():
+        config_full_path = os.path.join(config_path, '{}.conf'.format(name))
+        if 'path' in prop.keys():
+            collector_dir = os.path.join(collectors_path, name)
+            rmtree(collector_dir)
+            os.remove(config_full_path)
+        else:
+            original_collector = os.path.join(sys.prefix, 'etc', 'diamond',
+                                              'collectors',
+                                              '{0}.conf'.format(name))
+            copy(original_collector, config_path)
+            config_full_path = os.path.join(config_path,
+                                            '{}.conf'.format(name))
+            disable_collector(config_full_path)
 
 
 def config_handlers(ctx, handlers, config_path, handlers_path):

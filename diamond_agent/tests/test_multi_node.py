@@ -4,6 +4,8 @@ import cPickle
 import unittest
 import tempfile
 
+from configobj import ConfigObj
+
 from cloudify.workflows import local
 
 
@@ -68,6 +70,57 @@ class TestMultiNode(unittest.TestCase):
 
         self.assertEqual(node_id, metric_path[1])
         self.assertEqual(node_instance_id, metric_path[2])
+
+    def test_del_collectors(self):
+        log_path = tempfile.mktemp()
+        inputs = {
+            'diamond_config': {
+                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
+                'interval': 1,
+                'handlers': {
+                    'test_handler.TestHandler': {
+                        'path': 'handlers/test_handler.py',
+                        'config': {
+                            'log_path': log_path,
+                        }
+                    }
+                }
+            },
+            'collectors_config': {
+                'TestCollector': {
+                    'path': 'collectors/test.py',
+                    'config': {
+                        'name': 'metric',
+                        'value': 42,
+                    },
+                },
+                'CPUCollector': {
+                    'config': {
+                        'some': 'property',
+                    },
+                },
+            },
+        }
+        self.env = self._create_env(inputs)
+        self.is_uninstallable = False
+        self.env.execute('install', task_retries=0)
+
+        test_collector_conf = os.path.join(inputs['diamond_config']['prefix'],
+                                           'etc', 'collectors',
+                                           'TestCollector.conf')
+        cpu_collector_conf = os.path.join(inputs['diamond_config']['prefix'],
+                                          'etc', 'collectors',
+                                          'CPUCollector.conf')
+
+        self.assertTrue(os.path.isfile(test_collector_conf))
+        self.assertEqual(ConfigObj(cpu_collector_conf)['some'], 'property')
+        self.assertEqual(ConfigObj(cpu_collector_conf)['enabled'], 'True')
+
+        self.env.execute('uninstall', task_retries=0)
+
+        self.assertFalse(os.path.isfile(test_collector_conf))
+        self.assertIsNone(ConfigObj(cpu_collector_conf).get('some'))
+        self.assertEqual(ConfigObj(cpu_collector_conf)['enabled'], 'False')
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(),
