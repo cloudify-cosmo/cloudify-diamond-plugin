@@ -64,9 +64,9 @@ def install(ctx, diamond_config, **kwargs):
     :return:
     """
     paths = get_paths(diamond_config.get('prefix'))
-    ctx.runtime_properties['diamond_pid_file'] = os.path.join(paths['pid'],
-                                                              PID_NAME)
-    host = '.'.join([ctx.node_name, ctx.node_id])
+    ctx.instance.runtime_properties['diamond_pid_file'] = os.path.join(
+        paths['pid'], PID_NAME)
+    host = '.'.join([ctx.node.name, ctx.instance.id])
 
     handlers = config_handlers(ctx,
                                diamond_config.get('handlers'),
@@ -75,7 +75,7 @@ def install(ctx, diamond_config, **kwargs):
 
     interval = diamond_config.get('interval', DEFAULT_INTERVAL)
     create_config(hostname=host,
-                  path_prefix=ctx.deployment_id,
+                  path_prefix=ctx.deployment.id,
                   handlers=handlers,
                   interval=interval,
                   paths=paths)
@@ -100,7 +100,7 @@ def install(ctx, diamond_config, **kwargs):
 
 @operation
 def uninstall(ctx, **kwargs):
-    pid_path = ctx.runtime_properties['diamond_pid_file']
+    pid_path = ctx.instance.runtime_properties['diamond_pid_file']
     # letting the workflow engine handle this in case of errors
     # so no try/catch
     stop(pid_path)
