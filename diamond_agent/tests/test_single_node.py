@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import cPickle
 import unittest
 import tempfile
@@ -51,7 +52,7 @@ class TestSingleNode(unittest.TestCase):
         }
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
-
+        print log_path
         if not is_created(log_path):
             self.fail('file {} expected, but not found!'.format(log_path))
 
@@ -71,6 +72,53 @@ class TestSingleNode(unittest.TestCase):
 
         self.assertEqual(node_id, metric_path[1])
         self.assertEqual(node_instance_id, metric_path[2])
+
+    def test_cloudify_handler_format(self):
+        log_path = tempfile.mktemp()
+        inputs = {
+            'diamond_config': {
+                'prefix': tempfile.mkdtemp(prefix='cloudify-'),
+                'interval': 1,
+                'handlers': {
+                    'test_handler.TestHandler': {
+                        'path': 'handlers/test_handler.py',
+                        'config': {
+                            'log_path': log_path,
+                            'output_cloudify_format': True,
+                        }
+                    }
+                }
+            },
+            'collectors_config': {
+                'TestCollector': {
+                    'path': 'collectors/test.py',
+                    'config': {
+                        'name': 'metric',
+                        'value': 42,
+                    },
+                },
+            },
+        }
+        self.env = self._create_env(inputs)
+        self.env.execute('install', task_retries=0)
+        if not is_created(log_path):
+            self.fail('file {} expected, but not found!'.format(log_path))
+
+        with open(log_path, 'r') as fh:
+            metric = json.loads(cPickle.load(fh))
+
+        collector_config = \
+            inputs['collectors_config']['TestCollector']['config']
+        self.assertEqual(collector_config['name'], metric['path'])
+        self.assertEqual(collector_config['value'], metric['metric'])
+        self.assertEqual(self.env.name, metric['deployment_id'])
+        self.assertEqual('TestCollector', metric['name'])
+
+        node_instances = self.env.storage.get_node_instances()
+        node_id, node_instance_id = get_ids(node_instances, 'node')
+
+        self.assertEqual(node_id, metric['node_name'])
+        self.assertEqual(node_instance_id, metric['node_id'])
 
     # custom handler + no collector
     # diamond should run without outputting anything

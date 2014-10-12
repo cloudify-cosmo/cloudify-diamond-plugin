@@ -32,6 +32,7 @@ from cloudify import exceptions
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
 DEFAULT_INTERVAL = 10
+DEFAULT_TIMEOUT = 10
 
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
@@ -130,18 +131,20 @@ def start_diamond(conf_path):
     return_code = call(cmd.split())
     if return_code != 0:
         raise exceptions.NonRecoverableError('Diamond agent failed to start')
+    pid = get_pid(config_file)
+    for _ in range(DEFAULT_TIMEOUT):
+        if pid_exists(pid):
+            return
+        sleep(1)
+    raise exceptions.NonRecoverableError('Diamond agent failed to start')
 
 
 def stop_diamond(conf_path):
     config_file = os.path.join(conf_path, CONFIG_NAME)
-    config = ConfigObj(infile=config_file, raise_errors=True)
-    pid_path = config['server']['pid_file']
-    with open(pid_path) as f:
-        pid = int(f.read())
-
+    pid = get_pid(config_file)
     os.kill(pid, SIGTERM)
 
-    for _ in range(10):
+    for _ in range(DEFAULT_TIMEOUT):
         if not pid_exists(pid):
             return
         sleep(1)
@@ -151,6 +154,13 @@ def stop_diamond(conf_path):
 def restart_diamond(conf_dir):
     stop_diamond(conf_dir)
     start_diamond(conf_dir)
+
+
+def get_pid(config_file):
+    config = ConfigObj(infile=config_file, raise_errors=True)
+    pid_path = config['server']['pid_file']
+    with open(pid_path) as f:
+        return int(f.read())
 
 
 def enable_collectors(ctx, collectors, config_path, collectors_path):
