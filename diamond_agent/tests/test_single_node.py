@@ -188,4 +188,4 @@ def get_pid(config):
     with open(pid_file, 'r') as pf:
         pid = int(pf.read())
 
-    return  pid
+    return pid
