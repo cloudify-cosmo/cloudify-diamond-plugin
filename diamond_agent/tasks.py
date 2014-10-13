@@ -15,6 +15,7 @@
 
 import os
 import sys
+import copy as copy_objects
 from glob import glob
 from time import sleep
 from signal import SIGTERM
@@ -53,7 +54,7 @@ DEFAULT_HANDLERS = {
 @operation
 def install(ctx, diamond_config, **kwargs):
     paths = get_paths(diamond_config.get('prefix'))
-    ctx.runtime_properties['diamond_paths'] = paths
+    ctx.instance.runtime_properties['diamond_paths'] = paths
 
     handlers = config_handlers(ctx,
                                diamond_config.get('handlers'),
@@ -61,7 +62,7 @@ def install(ctx, diamond_config, **kwargs):
                                paths['handlers'])
 
     interval = diamond_config.get('interval', DEFAULT_INTERVAL)
-    create_config(path_prefix=ctx.deployment_id,
+    create_config(path_prefix=ctx.deployment.id,
                   handlers=handlers,
                   interval=interval,
                   paths=paths)
@@ -81,7 +82,7 @@ def uninstall(ctx, **kwargs):
 
 @operation
 def start(ctx, **kwargs):
-    paths = ctx.runtime_properties['diamond_paths']
+    paths = ctx.instance.runtime_properties['diamond_paths']
     try:
         start_diamond(paths['config'])
     except OSError as e:
@@ -91,7 +92,7 @@ def start(ctx, **kwargs):
 
 @operation
 def stop(ctx, **kwargs):
-    conf_path = ctx.runtime_properties['diamond_paths']['config']
+    conf_path = ctx.instance.runtime_properties['diamond_paths']['config']
     # letting the workflow engine handle this in case of errors
     # so no try/catch
     stop_diamond(conf_path)
@@ -177,7 +178,8 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
 
         config = prop.get('config', {})
         config.update({'enabled': True,
-                       'hostname': '{0}.{1}'.format(ctx.node_name, ctx.node_id)
+                       'hostname': '{0}.{1}'.format(ctx.node.name,
+                                                    ctx.instance.id)
                        })
         prop['config'] = config
         config_full_path = os.path.join(config_path, '{}.conf'.format(name))
@@ -208,9 +210,9 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     return list of active handlers.
     """
     if handlers is None:
-        handlers = DEFAULT_HANDLERS
-        handlers['cloudify_handler.cloudify.CloudifyHandler']['rmq_server'] = \
-            get_manager_ip()
+        handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
+        handlers['cloudify_handler.cloudify.CloudifyHandler']['config'][
+            'rmq_server'] = get_manager_ip()
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
@@ -354,7 +356,7 @@ def get_host_ctx(ctx):
     """
     helper method ..
     """
-    ctx._get_node_instance_if_needed()
-    host_id = ctx._node_instance.host_id
+    ctx.instance._get_node_instance_if_needed()
+    host_id = ctx.instance._node_instance.host_id
     host_node_instance = ctx._endpoint.get_node_instance(host_id)
     return host_node_instance

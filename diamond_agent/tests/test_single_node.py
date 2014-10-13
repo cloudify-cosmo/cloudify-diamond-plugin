@@ -52,7 +52,6 @@ class TestSingleNode(unittest.TestCase):
         }
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
-        print log_path
         if not is_created(log_path):
             self.fail('file {} expected, but not found!'.format(log_path))
 
