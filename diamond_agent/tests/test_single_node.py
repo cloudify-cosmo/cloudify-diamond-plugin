@@ -113,6 +113,9 @@ class TestSingleNode(unittest.TestCase):
         self.assertEqual(collector_config['value'], metric['metric'])
         self.assertEqual(self.env.name, metric['deployment_id'])
         self.assertEqual('TestCollector', metric['name'])
+        self.assertEqual('', metric['unit'])
+        self.assertEqual('GAUGE', metric['type'])
+        self.assertEqual('host', metric['host'])
 
         node_instances = self.env.storage.get_node_instances()
         node_id, node_instance_id = get_ids(node_instances, 'node')

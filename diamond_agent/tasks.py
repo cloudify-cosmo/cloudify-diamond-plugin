@@ -173,8 +173,8 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
 
         config = prop.get('config', {})
         config.update({'enabled': True,
-                       'hostname': ctx.node_name,
-                       'path_suffix': ctx.node_id})
+                       'hostname': '{0}.{1}'.format(ctx.node_name, ctx.node_id)
+                       })
         prop['config'] = config
         config_full_path = os.path.join(config_path, '{}.conf'.format(name))
         write_config(config_full_path, prop.get('config', {}))
