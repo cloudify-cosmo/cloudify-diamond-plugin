@@ -131,8 +131,9 @@ def start_diamond(conf_path):
     return_code = call(cmd.split())
     if return_code != 0:
         raise exceptions.NonRecoverableError('Diamond agent failed to start')
-    pid = get_pid(config_file)
+
     for _ in range(DEFAULT_TIMEOUT):
+        pid = get_pid(config_file)
         if pid_exists(pid):
             return
         sleep(1)
@@ -159,8 +160,11 @@ def restart_diamond(conf_dir):
 def get_pid(config_file):
     config = ConfigObj(infile=config_file, raise_errors=True)
     pid_path = config['server']['pid_file']
-    with open(pid_path) as f:
-        return int(f.read())
+    try:
+        with open(pid_path) as f:
+            return int(f.read())
+    except (IOError, ValueError):
+        return None
 
 
 def enable_collectors(ctx, collectors, config_path, collectors_path):
