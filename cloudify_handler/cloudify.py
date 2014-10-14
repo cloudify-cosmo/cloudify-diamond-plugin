@@ -22,6 +22,25 @@ except ImportError:
 
 
 class CloudifyHandler(rmqHandler):
+
+    def _bind(self):
+        """
+           Create  socket and bind (we override the default implementation
+           to set auto_delete=True)
+        """
+        credentials = pika.PlainCredentials(self.user, self.password)
+        params = pika.ConnectionParameters(credentials=credentials,
+                                           host=self.server,
+                                           virtual_host=self.vhost,
+                                           port=self.port)
+        self.connection = pika.BlockingConnection(params)
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(exchange=self.topic_exchange,
+                                      exchange_type="topic",
+                                      auto_delete=True,
+                                      durable=False,
+                                      internal=False)
+
     def process(self, metric):
         if not pika:
             return

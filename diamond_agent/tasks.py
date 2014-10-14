@@ -38,14 +38,12 @@ DEFAULT_TIMEOUT = 10
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
         'config': {
-            'rmq_server': 'localhost',
-            'rmq_port': 5672,
-            'rmq_exchange': 'cloudify-monitoring',
-            'rmq_user': '',
-            'rmq_password': '',
-            'rmq_vhost': '/',
-            'rmq_exchange_type': 'topic',
-            'rmq_durable': False
+            'server': 'localhost',
+            'port': 5672,
+            'topic_exchange': 'cloudify-monitoring',
+            'vhost': '/',
+            'user': 'guest',
+            'password': 'guest',
         }
     }
 }
@@ -212,7 +210,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     if handlers is None:
         handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
         handlers['cloudify_handler.cloudify.CloudifyHandler']['config'][
-            'rmq_server'] = get_manager_ip()
+            'server'] = get_manager_ip()
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
@@ -262,7 +260,7 @@ def get_paths(prefix):
     creates folder structure and returns dict with full paths
     """
     if prefix is None:
-        prefix = mkdtemp(prefix='cloudify-')
+        prefix = mkdtemp(prefix='cloudify-monitoring-')
     paths = {
         'config': os.path.join(prefix, 'etc'),
         'collectors_config': os.path.join(prefix, 'etc', 'collectors'),
