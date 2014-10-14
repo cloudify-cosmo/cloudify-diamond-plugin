@@ -57,7 +57,7 @@ class TestDiamondPlugin(unittest.TestCase):
 
     @unittest.skip('probably not needed')
     def test_start_stop(self):
-        tasks.start(self.ctx)
+        tasks.start_diamond(self.ctx)
         sleep(3)
         with open('/tmp/diamond.pid', 'r') as f:
             pid = int(f.readline())
@@ -65,7 +65,7 @@ class TestDiamondPlugin(unittest.TestCase):
         if not pid_exists(pid):
             self.fail('diamond agent doesn\'t run')
         else:
-            tasks.stop(self.ctx)
+            tasks.stop_diamond(self.ctx)
             sleep(2)
 
         if pid_exists(pid):

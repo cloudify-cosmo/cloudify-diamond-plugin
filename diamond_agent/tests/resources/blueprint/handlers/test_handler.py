@@ -15,10 +15,14 @@
 
 import cPickle
 from diamond.handler.Handler import Handler
+from cloudify_handler.format import jsonify
 
 
 class TestHandler(Handler):
 
     def process(self, metric):
+        if self.config.get('output_cloudify_format', False):
+            metric = jsonify(metric)
+
         with open(self.config['log_path'], 'a') as f:
             cPickle.dump(metric, f)
