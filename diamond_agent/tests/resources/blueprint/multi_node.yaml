@@ -1,7 +1,7 @@
 tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
-    - https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/types/types.yaml
+    - https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1025-update-monitoring-interfaces/resources/rest-service/cloudify/types/types.yaml
 
 plugins:
     diamond:
@@ -18,7 +18,7 @@ node_templates:
         properties:
             install_agent: false
         interfaces:
-            cloudify.interfaces.monitor_lifecycle:
+            cloudify.interfaces.monitoring_agent:
                 - install:
                     mapping: diamond.diamond_agent.tasks.install
                     properties:
@@ -30,14 +30,14 @@ node_templates:
     subnode:
         type: cloudify.types.base
         interfaces:
-            cloudify.interfaces.monitor_lifecycle:
-                - add:
-                     mapping: diamond.diamond_agent.tasks.add_collectors
-                     properties:
+            cloudify.interfaces.monitoring:
+                - start:
+                    mapping: diamond.diamond_agent.tasks.add_collectors
+                    properties:
                         collectors_config: { get_input: collectors_config }
-                - remove:
-                     mapping: diamond.diamond_agent.tasks.del_collectors
-                     properties:
+                - stop:
+                    mapping: diamond.diamond_agent.tasks.del_collectors
+                    properties:
                         collectors_config: { get_input: collectors_config }
 
         relationships:
