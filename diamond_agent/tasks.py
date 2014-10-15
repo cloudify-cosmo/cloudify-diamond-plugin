@@ -133,7 +133,7 @@ def start_diamond(conf_path):
 
     for _ in range(DEFAULT_TIMEOUT):
         pid = get_pid(config_file)
-        if pid_exists(pid):
+        if pid and pid_exists(pid):
             return
         sleep(1)
     raise exceptions.NonRecoverableError('Diamond agent failed to start')
@@ -142,13 +142,15 @@ def start_diamond(conf_path):
 def stop_diamond(conf_path):
     config_file = os.path.join(conf_path, CONFIG_NAME)
     pid = get_pid(config_file)
-    os.kill(pid, SIGTERM)
-
-    for _ in range(DEFAULT_TIMEOUT):
-        if not pid_exists(pid):
-            return
-        sleep(1)
-    raise exceptions.NonRecoverableError("Diamond couldn't be killed")
+    if pid:
+        os.kill(pid, SIGTERM)
+        for _ in range(DEFAULT_TIMEOUT):
+            if not pid_exists(pid):
+                return
+            sleep(1)
+        raise exceptions.NonRecoverableError("Diamond couldn't be killed")
+    else:
+        raise exceptions.NonRecoverableError('Failed reading diamond pid file')
 
 
 def restart_diamond(conf_dir):
