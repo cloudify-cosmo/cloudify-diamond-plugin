@@ -16,12 +16,8 @@ class TestMultiNode(unittest.TestCase):
         self.env = None
 
     def tearDown(self):
-        if self.env:
-            try:
-                self.env.execute('uninstall', task_retries=0)
-            except RuntimeError as e:
-                if self.is_uninstallable:
-                    raise e
+        if self.env and self.is_uninstallable:
+            self.env.execute('uninstall', task_retries=0)
 
     def test_custom_collectors(self):
         log_path = tempfile.mktemp()

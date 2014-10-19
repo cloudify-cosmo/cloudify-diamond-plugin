@@ -14,59 +14,33 @@
 #  * limitations under the License.
 
 import os
+import mock
 import unittest
-from time import sleep
-from psutil import pid_exists
-from diamond_agent import tasks
-from configobj import ConfigObj
-from cloudify.mocks import MockCloudifyContext
+import tempfile
+
+import diamond_agent.tasks as tasks
 
 
-class TestDiamondPlugin(unittest.TestCase):
-    def setUp(self):
-        os.environ['MANAGEMENT_IP'] = '127.0.0.1'
-        self.config = {
-            'deployment_id': 'dep',
-            'node_name': 'vm',
-            'node_id': 'vm_id',
-            'properties': {
-                'config': {
-                    'interval': '10',
-                    }
-            }
-        }
-        self.ctx = MockCloudifyContext(**self.config)
-        tasks.install(self.ctx)
+class TestHelperFunctions(unittest.TestCase):
+    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
+    def test_get_paths_with_prefix(self, _):
+        prefix = tempfile.mktemp()
+        paths = tasks.get_paths(prefix)
+        for path in paths.values():
+            self.assertTrue(path.startswith(prefix))
 
-    @unittest.skip('will fix. soon.')
-    def test_install(self):
-        tasks.install(self.ctx)
-        config_path = os.path.join(self.ctx['diamond_config_path'],
-                                   'diamond.conf')
-        try:
-            config_file = ConfigObj(infile=config_path, file_error=True)
-        except IOError:
-            self.fail('Could not open config file: {}'.format(config_path))
-        self.assertEqual(config_file['collectors']['default']['path_prefix'],
-                         self.config['deployment_id'])
-        self.assertEqual(config_file['collectors']['default']['hostname'],
-                         '.'.join([self.config['node_name'],
-                                   self.config['node_id']]))
-        self.assertEqual(config_file['collectors']['default']['interval'],
-                         self.config['properties']['config']['interval'])
+    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
+    def test_get_paths_with_env(self, _):
+        prefix = tempfile.mktemp()
+        with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': prefix}):
+            paths = tasks.get_paths(None)
+        for path in paths.values():
+            self.assertTrue(path.startswith(os.path.split(prefix)[0]))
 
-    @unittest.skip('probably not needed')
-    def test_start_stop(self):
-        tasks.start_diamond(self.ctx)
-        sleep(3)
-        with open('/tmp/diamond.pid', 'r') as f:
-            pid = int(f.readline())
-
-        if not pid_exists(pid):
-            self.fail('diamond agent doesn\'t run')
-        else:
-            tasks.stop_diamond(self.ctx)
-            sleep(2)
-
-        if pid_exists(pid):
-            self.fail('diamond agent didn\'t stop')
+    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
+    def test_get_paths_without_env(self, _):
+        prefix = os.path.join(tempfile.gettempdir(), 'cloudify-monitoring-')
+        with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': ''}):
+            paths = tasks.get_paths(None)
+        for path in paths.values():
+            self.assertTrue(path.startswith(prefix))
