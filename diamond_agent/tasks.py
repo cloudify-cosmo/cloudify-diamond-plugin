@@ -262,7 +262,11 @@ def get_paths(prefix):
     creates folder structure and returns dict with full paths
     """
     if prefix is None:
-        prefix = mkdtemp(prefix='cloudify-monitoring-')
+        if os.environ.get('CELERY_WORK_DIR'):
+            prefix = os.path.split(os.environ.get('CELERY_WORK_DIR'))[0]
+        else:
+            prefix = mkdtemp(prefix='cloudify-monitoring-')
+
     paths = {
         'config': os.path.join(prefix, 'etc'),
         'collectors_config': os.path.join(prefix, 'etc', 'collectors'),
@@ -272,10 +276,14 @@ def get_paths(prefix):
         'pid': os.path.join(prefix, 'var', 'run'),
         'log': os.path.join(prefix, 'var', 'log')
     }
+    create_paths(paths)
+    return paths
+
+
+def create_paths(paths):
     for path in paths.values():
         if not os.path.exists(path):
             os.makedirs(path)
-    return paths
 
 
 def create_config(path_prefix,
