@@ -10,5 +10,4 @@ setup(
                       'diamond==3.5.0',
                       'ConfigObj==5.0.6',
                       'psutil==2.1.1'],
-    tests_require=['nose', 'mock']
 )
