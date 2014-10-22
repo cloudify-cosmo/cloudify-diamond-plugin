@@ -2,21 +2,23 @@ import os
 import time
 import json
 import cPickle
-import unittest
 import tempfile
+from testtools import TestCase, ExpectedException
 
 import psutil
 
 from cloudify.workflows import local
 
 
-class TestSingleNode(unittest.TestCase):
+class TestSingleNode(TestCase):
     def setUp(self):
+        super(TestSingleNode, self).setUp()
         os.environ['MANAGEMENT_IP'] = '127.0.0.1'
         self.is_uninstallable = True
         self.env = None
 
     def tearDown(self):
+        super(TestSingleNode, self).tearDown()
         if self.env and self.is_uninstallable:
                 self.env.execute('uninstall', task_retries=0)
 
@@ -49,7 +51,7 @@ class TestSingleNode(unittest.TestCase):
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
         if not is_created(log_path):
-            self.fail('file {} expected, but not found!'.format(log_path))
+            self.fail('file {0} expected, but not found!'.format(log_path))
 
         with open(log_path, 'r') as fh:
             metric = cPickle.load(fh)
@@ -97,7 +99,7 @@ class TestSingleNode(unittest.TestCase):
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
         if not is_created(log_path):
-            self.fail('file {} expected, but not found!'.format(log_path))
+            self.fail('file {0} expected, but not found!'.format(log_path))
 
         with open(log_path, 'r') as fh:
             metric = json.loads(cPickle.load(fh))
@@ -186,7 +188,7 @@ class TestSingleNode(unittest.TestCase):
         }
         self.is_uninstallable = False
         self.env = self._create_env(inputs)
-        with self.assertRaisesRegexp(RuntimeError, 'Empty handlers dict'):
+        with ExpectedException(RuntimeError, ".*Empty handlers dict"):
             self.env.execute('install', task_retries=0)
 
     def _create_env(self, inputs):

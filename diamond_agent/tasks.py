@@ -85,7 +85,7 @@ def start(ctx, **kwargs):
         start_diamond(paths['config'])
     except OSError as e:
         raise exceptions.NonRecoverableError(
-            'Starting diamond failed: {}'.format(e))
+            'Starting diamond failed: {0}'.format(e))
 
 
 @operation
@@ -173,7 +173,7 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
         if 'path' in prop.keys():
             collector_dir = os.path.join(collectors_path, name)
             os.mkdir(collector_dir)
-            collector_file = os.path.join(collector_dir, '{}.py'.format(name))
+            collector_file = os.path.join(collector_dir, '{0}.py'.format(name))
             ctx.download_resource(prop['path'], collector_file)
 
         config = prop.get('config', {})
@@ -182,13 +182,13 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
                                                     ctx.instance.id)
                        })
         prop['config'] = config
-        config_full_path = os.path.join(config_path, '{}.conf'.format(name))
+        config_full_path = os.path.join(config_path, '{0}.conf'.format(name))
         write_config(config_full_path, prop.get('config', {}))
 
 
 def disable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
-        config_full_path = os.path.join(config_path, '{}.conf'.format(name))
+        config_full_path = os.path.join(config_path, '{0}.conf'.format(name))
         if 'path' in prop.keys():
             collector_dir = os.path.join(collectors_path, name)
             rmtree(collector_dir)
@@ -199,7 +199,7 @@ def disable_collectors(ctx, collectors, config_path, collectors_path):
                                               '{0}.conf'.format(name))
             copy(original_collector, config_path)
             config_full_path = os.path.join(config_path,
-                                            '{}.conf'.format(name))
+                                            '{0}.conf'.format(name))
             disable_collector(config_full_path)
 
 
@@ -219,10 +219,11 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     for name, prop in handlers.items():
         if 'path' in prop.keys():
             handler_file = os.path.join(handlers_path,
-                                        '{}.py'.format(name.split('.')[-2]))
+                                        '{0}.py'.format(name.split('.')[-2]))
             ctx.download_resource(prop['path'], handler_file)
 
-        path = os.path.join(config_path, '{}.conf'.format(name.split('.')[-1]))
+        path = os.path.join(config_path, '{0}.conf'.format(
+            name.split('.')[-1]))
         write_config(path, prop.get('config', {}))
 
     return handlers.keys()
@@ -264,6 +265,7 @@ def get_paths(prefix):
     if prefix is None:
         if os.environ.get('CELERY_WORK_DIR'):
             prefix = os.path.split(os.environ.get('CELERY_WORK_DIR'))[0]
+            prefix = os.path.join(prefix, 'diamond')
         else:
             prefix = mkdtemp(prefix='cloudify-monitoring-')
 
@@ -331,7 +333,7 @@ def create_config(path_prefix,
             'class': 'handlers.TimedRotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'default',
-            'args': "('{}', 'midnight', 1, 7)".format(
+            'args': "('{0}', 'midnight', 1, 7)".format(
                 os.path.join(paths['log'], 'diamond.log')),
         },
         'formatter_default': {

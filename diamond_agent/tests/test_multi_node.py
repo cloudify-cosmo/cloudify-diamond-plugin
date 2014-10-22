@@ -1,7 +1,7 @@
 import os
 import time
 import cPickle
-import unittest
+import testtools
 import tempfile
 
 from configobj import ConfigObj
@@ -9,13 +9,15 @@ from configobj import ConfigObj
 from cloudify.workflows import local
 
 
-class TestMultiNode(unittest.TestCase):
+class TestMultiNode(testtools.TestCase):
     def setUp(self):
+        super(TestMultiNode, self).setUp()
         os.environ['MANAGEMENT_IP'] = '127.0.0.1'
         self.is_uninstallable = True
         self.env = None
 
     def tearDown(self):
+        super(TestMultiNode, self).tearDown()
         if self.env and self.is_uninstallable:
             self.env.execute('uninstall', task_retries=0)
 
@@ -48,7 +50,7 @@ class TestMultiNode(unittest.TestCase):
         self.env.execute('install', task_retries=0)
 
         if not is_created(log_path):
-            self.fail('file {} expected, but not found!'.format(log_path))
+            self.fail('file {0} expected, but not found!'.format(log_path))
 
         with open(log_path, 'r') as fh:
             metric = cPickle.load(fh)
