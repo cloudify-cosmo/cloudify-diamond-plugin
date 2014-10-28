@@ -14,7 +14,7 @@ inputs:
 
 node_templates:
     node:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             install_agent: false
         interfaces:

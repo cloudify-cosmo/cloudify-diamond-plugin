@@ -14,7 +14,7 @@ inputs:
 
 node_templates:
     node:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             install_agent: false
         interfaces:
@@ -28,7 +28,7 @@ node_templates:
                 uninstall: diamond.diamond_agent.tasks.uninstall
 
     subnode:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.monitoring:
                 start:
