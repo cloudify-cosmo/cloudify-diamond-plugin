@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name='cloudify-diamond-plugin',
-    version='3.1ga',
+    version='3.1',
     author='Cloudify',
     author_email='cosmo-admin@gigaspaces.com',
     packages=['diamond_agent', 'cloudify_handler'],
-    install_requires=['cloudify-plugins-common==3.1ga',
+    install_requires=['cloudify-plugins-common==3.1',
                       'diamond==3.5.0',
                       'ConfigObj==5.0.6',
                       'psutil==2.1.1'],
