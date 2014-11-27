@@ -1,4 +1,6 @@
-cloudify-diamond-plugin
-=======================
+# Cloudify Diamond Plugin
 
-Cloudify diamond monitoring plugin
+Cloudify [Diamond](https://github.com/BrightcoveOS/Diamond) monitoring plugin.
+
+See [Diamond Plugin](http://getcloudify.org/guide/3.1/plugin-script.html)
+
