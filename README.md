@@ -1,6 +1,6 @@
 # Cloudify Diamond Plugin
 
-* Master Branch [![Build Status](https://travis-ci.org/cloudify-cosmo/cloudify-cloudstack-plugin.svg?branch=master)](https://travis-ci.org/cloudify-cosmo/cloudify-cloudstack-plugin)
+* Master Branch [![Build Status](https://travis-ci.org/cloudify-cosmo/cloudify-diamond-plugin.svg?branch=master)](https://travis-ci.org/cloudify-cosmo/cloudify-diamond-plugin)
 
 Cloudify [Diamond](https://github.com/BrightcoveOS/Diamond) monitoring plugin.
 
