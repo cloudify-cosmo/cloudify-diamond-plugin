@@ -11,25 +11,24 @@ install:
 script:
 - tox -e $TOX_ENV
 deploy:
-  matrix:
   - provider: pypi
-    server: https://pypi.python.org/pypi
-    on:
-    branch: pypi-release
-    condition: $TOX_ENV = py27
-    user:
-      secure: b/oCmpkzZCm3R02XfLpa8Dh/5npSi62owhXPYE3ihKbsaDQe6LhXrtJ2nVMJNHYbVk84ZYRnH8fmHPDQ1j8mb84vjkEydQm8pnALxtnqEGzNfWXmH6rLxGbWvy+EJU5i8QB1ntjzl6tvQEwvXHb3AsmYe6ikCQy9UVHs1xXpKF8=
-    password:
-      secure: P9mRLYp62eAo9MVgbhM/HuKOrtjiyHq+MaRlNYSDfIk4tieGR+DFFTBIqTvD2JO/Z6GEkBSFNnB5X7Q45rBYnmSFRVdwOmObB403vl7r3sloxVWg5LrVQwEtiqRBa8nCX65vrqvtchdiGj5QJRNvwXeg8YfUuZp+85yMiKe6Ifo=
+  server: https://pypi.python.org/pypi
+  on:
+  branch: pypi-release
+  condition: $TOX_ENV = py27
+  user:
+    secure: b/oCmpkzZCm3R02XfLpa8Dh/5npSi62owhXPYE3ihKbsaDQe6LhXrtJ2nVMJNHYbVk84ZYRnH8fmHPDQ1j8mb84vjkEydQm8pnALxtnqEGzNfWXmH6rLxGbWvy+EJU5i8QB1ntjzl6tvQEwvXHb3AsmYe6ikCQy9UVHs1xXpKF8=
+  password:
+    secure: P9mRLYp62eAo9MVgbhM/HuKOrtjiyHq+MaRlNYSDfIk4tieGR+DFFTBIqTvD2JO/Z6GEkBSFNnB5X7Q45rBYnmSFRVdwOmObB403vl7r3sloxVWg5LrVQwEtiqRBa8nCX65vrqvtchdiGj5QJRNvwXeg8YfUuZp+85yMiKe6Ifo=
   - provider: pypi
-    server: https://pypitest.python.org/pypi
-    on:
-    branch: pypi-test-release
-    condition: $TOX_ENV = py27
-    user:
-      secure: Y7f2oSGy5S12E8ZjFtAWGjHWXI4mwrRns563H046sUfp1rKQHkCGZCGisNXxpvgrnJ/DlG9TjXbETrvW7y4jeZCg8zIuj83tl+yNfHJjr700ebvOZ/Aui1AzEClFADvNByG99IYuIQLe1NIf0OMJSEv3UTZPk/A81HUJe/ytFAU=
-    password:
-      secure: RunNdReC770DRNyFF/FTxDkrYgT+wQMvEp4/uuDofC4FxSYXGLkJBuwFoouD1uMgxMDlpm7IzMQ380BXW/DzGoyhr9dt2J743czvoPYOUrJXO+oQigCbspi2vA1/FSu3jlLfRyMlhY4R1hoP9vvep9DGGHqWgPkgs5PAJ0n/P/s=
+  server: https://pypitest.python.org/pypi
+  on:
+  branch: pypi-test-release
+  condition: $TOX_ENV = py27
+  user:
+    secure: Y7f2oSGy5S12E8ZjFtAWGjHWXI4mwrRns563H046sUfp1rKQHkCGZCGisNXxpvgrnJ/DlG9TjXbETrvW7y4jeZCg8zIuj83tl+yNfHJjr700ebvOZ/Aui1AzEClFADvNByG99IYuIQLe1NIf0OMJSEv3UTZPk/A81HUJe/ytFAU=
+  password:
+    secure: RunNdReC770DRNyFF/FTxDkrYgT+wQMvEp4/uuDofC4FxSYXGLkJBuwFoouD1uMgxMDlpm7IzMQ380BXW/DzGoyhr9dt2J743czvoPYOUrJXO+oQigCbspi2vA1/FSu3jlLfRyMlhY4R1hoP9vvep9DGGHqWgPkgs5PAJ0n/P/s=
 after_deploy:
 - git clone https://github.com/cloudify-cosmo/travis-utils.git
 - python travis-utils/validate_pypi.py -v || exit 1
