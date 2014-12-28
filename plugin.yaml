@@ -6,3 +6,12 @@ plugins:
     diamond:
         executor: host_agent
         source: https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/1.2m1.zip
+deploy:
+  provider: pypi
+  server: https://pypi.python.org/pypi
+  on:
+    branch: pypi-release
+    condition: $TOX_ENV = py27
+after_deploy:
+  - git clone https://github.com/cloudify-cosmo/travis-utils.git
+  - python travis-utils/validate_pypi.py -v || exit 1
