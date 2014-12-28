@@ -10,5 +10,14 @@ install:
     - pip install tox
 script:
     - tox -e $TOX_ENV
+deploy:
+  provider: pypi
+  server: https://pypi.python.org/pypi
+  on:
+    branch: pypi-release
+    condition: $TOX_ENV = py27
+after_deploy:
+- git clone https://github.com/cloudify-cosmo/travis-utils.git
+- python travis-utils/validate_pypi.py -v || exit 1
 notifications:
     flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
