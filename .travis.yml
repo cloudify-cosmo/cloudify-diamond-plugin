@@ -24,7 +24,7 @@ deploy:
   - provider: pypi
     server: https://pypitest.python.org/pypi
     on:
-    branch: pypi-test-release
+    branch: pypi-test
     condition: $TOX_ENV = py27
     user:
       secure: Y7f2oSGy5S12E8ZjFtAWGjHWXI4mwrRns563H046sUfp1rKQHkCGZCGisNXxpvgrnJ/DlG9TjXbETrvW7y4jeZCg8zIuj83tl+yNfHJjr700ebvOZ/Aui1AzEClFADvNByG99IYuIQLe1NIf0OMJSEv3UTZPk/A81HUJe/ytFAU=
