@@ -1,6 +1,6 @@
 language: python
 python:
-- '2.7'
+- "2.7"
 env:
 - TOX_ENV=docs
 - TOX_ENV=flake8
@@ -16,17 +16,17 @@ deploy:
   on:
     branch: pypi-release
   condition: $TOX_ENV = py27
-  user: cloudify-maint
+  user: cosmo-maint
   password:
-    secure: Uwq7TWdQt3fWR6F1bic7G50ZWy99kMlI821SeGks4FePBXUP3MwQKlIHqpDq2LNZ/hnhmzGXMBRoKQqzUbL/4iNsJD3YW9rSaj3GhI7XOTAb7V2Q47ozXhMMVFmXhBwKKyowqkJflNQvyqSQXqM4Vpy8KdFqyaRYAU3rBe9j/5w=
+    secure: "D5ckG/G5qUYu4WdTJat1KhssCni8KpYxDvNlgQXipzIFxgumY4LGLbWqM6xRJ1zkvxTh5/vcPBOoYWgmuTS77CjTswzH3fi5G/qjnFX2kwYLICElNAoS/CgWgqxJ29piZk0iFcMt434aMwZFNXVdRfZm/swRGJxSXTB5GhamLvI="
 - provider: pypi
   server: https://pypitest.python.org/pypi
   on:
     branch: pypi-test
   condition: $TOX_ENV = py27
-  user: cloudify-maint
+  user: cosmo-maint
   password:
-    secure: hvl8oH+Ngwf+MEGMDy6EKWQ3F5uQjoUPxk4PHGYWakhl3ULFLNIYjhr/thrXrchbYqy8bikmdvflbXf1BW5E4olr4F3BqDFid98retiPuVka3W2hDbHdh9fugXBkJhWBujbhX8Z8EY4kfh2JIehaTLoc9pKX8V6o8u+iiQmeoB0=
+    secure: "FsSdqkjgxNArmpSOvXGOb2pnvavlk0/TUeg0VSQdrvrz9mi3GVwuM5PsP9uTsWXjq4XxxgRs113M4juzl+zICvU1lKAcU4RgaZQbWJttTzCIkv6XZ1Fva2LskYJvXJhoiSB3Xxj7gRI3/VUINcx2bJowxrSJ7dVsNtkgRz/9y/E="
 after_deploy:
 - git clone https://github.com/cloudify-cosmo/travis-utils.git
 - python travis-utils/validate_pypi.py -v || exit 1
