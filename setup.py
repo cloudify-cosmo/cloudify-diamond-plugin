@@ -5,6 +5,7 @@ setup(
     version='1.2a3',
     author='Cloudify',
     author_email='cosmo-admin@gigaspaces.com',
+    description='Cloudify Diamond monitoring plugin',
     packages=['diamond_agent', 'cloudify_handler'],
     install_requires=['cloudify-plugins-common==3.2a3',
                       'diamond==3.5.0',
