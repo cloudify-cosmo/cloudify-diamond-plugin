@@ -178,8 +178,9 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
 
         config = prop.get('config', {})
         config.update({'enabled': True,
-                       'hostname': '{0}.{1}'.format(ctx.node.name,
-                                                    ctx.instance.id)
+                       'hostname': '{0}.{1}.{2}'.format(get_host_id(ctx),
+                                                        ctx.node.name,
+                                                        ctx.instance.id)
                        })
         prop['config'] = config
         config_full_path = os.path.join(config_path, '{0}.conf'.format(name))
@@ -366,7 +367,11 @@ def get_host_ctx(ctx):
     """
     helper method ..
     """
-    ctx.instance._get_node_instance_if_needed()
-    host_id = ctx.instance._node_instance.host_id
+    host_id = get_host_id(ctx)
     host_node_instance = ctx._endpoint.get_node_instance(host_id)
     return host_node_instance
+
+
+def get_host_id(ctx):
+    ctx.instance._get_node_instance_if_needed()
+    return ctx.instance._node_instance.host_id

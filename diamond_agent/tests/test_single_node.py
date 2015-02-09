@@ -59,16 +59,18 @@ class TestSingleNode(TestCase):
 
         collector_config = \
             inputs['collectors_config']['TestCollector']['config']
-        self.assertEqual(collector_config['name'], metric_path[4])
+        self.assertEqual(collector_config['name'], metric_path[5])
         self.assertEqual(collector_config['value'], metric.value)
         self.assertEqual(self.env.name, metric_path[0])
-        self.assertEqual('TestCollector', metric_path[3])
+        self.assertEqual('TestCollector', metric_path[4])
 
         node_instances = self.env.storage.get_node_instances()
-        node_id, node_instance_id = get_ids(node_instances, 'node')
+        host_instance_id, node_id, node_instance_id = get_ids(node_instances,
+                                                              'node')
 
-        self.assertEqual(node_id, metric_path[1])
-        self.assertEqual(node_instance_id, metric_path[2])
+        self.assertEqual(host_instance_id, metric_path[1])
+        self.assertEqual(node_id, metric_path[2])
+        self.assertEqual(node_instance_id, metric_path[3])
 
     def test_cloudify_handler_format(self):
         log_path = tempfile.mktemp()
@@ -106,19 +108,35 @@ class TestSingleNode(TestCase):
 
         collector_config = \
             inputs['collectors_config']['TestCollector']['config']
-        self.assertEqual(collector_config['name'], metric['path'])
-        self.assertEqual(collector_config['value'], metric['metric'])
-        self.assertEqual(self.env.name, metric['deployment_id'])
-        self.assertEqual('TestCollector', metric['name'])
-        self.assertEqual('', metric['unit'])
-        self.assertEqual('GAUGE', metric['type'])
-        self.assertEqual('host', metric['host'])
 
         node_instances = self.env.storage.get_node_instances()
-        node_id, node_instance_id = get_ids(node_instances, 'node')
+        expected_host, expected_node_name, expected_node_id = get_ids(
+            node_instances, 'node')
+        expected_path = collector_config['name']
+        expected_metric = collector_config['value']
+        expected_deployment_id = self.env.name
+        expected_name = 'TestCollector'
+        expected_unit = ''
+        expected_type = 'GAUGE'
+        expected_service = '.'.join([
+            expected_deployment_id,
+            expected_node_name,
+            expected_node_id,
+            expected_name,
+            expected_path
+        ])
 
-        self.assertEqual(node_id, metric['node_name'])
-        self.assertEqual(node_instance_id, metric['node_id'])
+        self.assertEqual(expected_path, metric['path'])
+        self.assertEqual(expected_metric, metric['metric'])
+        self.assertEqual(expected_deployment_id, metric['deployment_id'])
+        self.assertEqual(expected_name, metric['name'])
+        self.assertEqual(expected_unit, metric['unit'])
+        self.assertEqual(expected_type, metric['type'])
+        self.assertEqual(expected_host, metric['host'])
+        self.assertEqual(expected_node_name, metric['node_name'])
+        self.assertEqual(expected_node_id, metric['node_id'])
+        self.assertEqual(expected_service, metric['service'])
+        self.assertTrue(time.time() - 120 <= metric['time'] <= time.time())
 
     # custom handler + no collector
     # diamond should run without outputting anything
@@ -226,7 +244,7 @@ def is_created(path, timeout=5):
 def get_ids(instances, name):
     for instance in instances:
         if instance['name'] == name:
-            return instance['node_id'], instance['id']
+            return instance['host_id'], instance['node_id'], instance['id']
 
 
 def get_pid(config):

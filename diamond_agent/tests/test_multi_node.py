@@ -58,16 +58,18 @@ class TestMultiNode(testtools.TestCase):
 
         collector_config = \
             inputs['collectors_config']['TestCollector']['config']
-        self.assertEqual(collector_config['name'], metric_path[4])
+        self.assertEqual(collector_config['name'], metric_path[5])
         self.assertEqual(collector_config['value'], metric.value)
         self.assertEqual(self.env.name, metric_path[0])
-        self.assertEqual('TestCollector', metric_path[3])
+        self.assertEqual('TestCollector', metric_path[4])
 
         node_instances = self.env.storage.get_node_instances()
-        node_id, node_instance_id = get_ids(node_instances, 'subnode')
+        host_instance_id, node_id, node_instance_id = get_ids(node_instances,
+                                                              'subnode')
 
-        self.assertEqual(node_id, metric_path[1])
-        self.assertEqual(node_instance_id, metric_path[2])
+        self.assertEqual(host_instance_id, metric_path[1])
+        self.assertEqual(node_id, metric_path[2])
+        self.assertEqual(node_instance_id, metric_path[3])
 
     def test_del_collectors(self):
         log_path = tempfile.mktemp()
@@ -144,4 +146,4 @@ def is_created(path, timeout=5):
 def get_ids(instances, name):
     for instance in instances:
         if instance['name'] == name:
-            return instance['node_id'], instance['id']
+            return instance['host_id'], instance['node_id'], instance['id']

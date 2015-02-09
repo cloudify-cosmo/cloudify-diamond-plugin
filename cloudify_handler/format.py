@@ -13,11 +13,25 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from json import dumps
+import json
 
 
 def jsonify(metric):
-    node_name, node_id = metric.host.split('.')
+    deployment_id = metric.getPathPrefix()
+    host, node_name, node_id = metric.host.split('.')
+    name = metric.getCollectorPath()
+    raw_metric_path = metric.getMetricPath()
+    path = raw_metric_path.replace('.', '_')
+    metric_value = float(metric.value)
+    metric_type = metric.metric_type
+    time = metric.timestamp
+    service = '.'.join([
+        deployment_id,
+        node_name,
+        node_id,
+        name,
+        raw_metric_path
+    ])
 
     output = {
         # Node instance id
@@ -27,31 +41,31 @@ def jsonify(metric):
         'node_name': node_name,
 
         # Deployment id
-        'deployment_id': metric.getPathPrefix(),
+        'deployment_id': deployment_id,
 
         # Metric name (e.g. cpu)
-        'name': metric.getCollectorPath(),
+        'name': name,
 
         # Sub-metric name (e.g. avg)
-        'path': metric.getMetricPath().replace('.', '_'),
+        'path': path,
 
         # The actual metric value
-        'metric': float(metric.value),
+        'metric': metric_value,
 
         # Metric unit
         'unit': '',
 
         # Metric type (gauge, counter, etc...)
-        'type': metric.metric_type,
+        'type': metric_type,
 
-        # Fixed stub for riemann
-        'host': 'host',
+        # Host instance id
+        'host': host,
 
         # The full metric name (
         # e.g. deployment_id.node_id.node_instance_id.metric)
-        'service': metric.path,
+        'service': service,
 
         # epoch timestamp of the metric
-        'time': metric.timestamp,
+        'time': time,
     }
-    return dumps(output)
+    return json.dumps(output)
