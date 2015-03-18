@@ -8,6 +8,8 @@ from testtools import TestCase, ExpectedException
 import psutil
 
 from cloudify.workflows import local
+from diamond_agent.tasks import _PATHS_TO_CLEAN_UP
+from diamond_agent.tasks import get_paths
 
 
 class TestSingleNode(TestCase):
@@ -181,11 +183,11 @@ class TestSingleNode(TestCase):
             'collectors_config': {},
 
         }
+        prefix = inputs['diamond_config']['prefix']
         self.is_uninstallable = False
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
-        pid_file = os.path.join(inputs['diamond_config']['prefix'],
-                                'var', 'run', 'diamond.pid')
+        pid_file = os.path.join(prefix, 'var', 'run', 'diamond.pid')
         with open(pid_file, 'r') as pf:
             pid = int(pf.read())
 
@@ -195,6 +197,12 @@ class TestSingleNode(TestCase):
         else:
             self.fail('diamond process not running')
         self.assertFalse(psutil.pid_exists(pid))
+
+        # Check if uninstall cleans up after diamond
+        for path_name in _PATHS_TO_CLEAN_UP:
+            path = os.path.join(prefix, path_name)
+            self.assertFalse(os.path.exists(path),
+                             msg="Path exists: {}".format(path))
 
     def test_no_handlers(self):
         inputs = {

@@ -48,6 +48,11 @@ DEFAULT_HANDLERS = {
     }
 }
 
+_PATHS_TO_CLEAN_UP = ['collectors',
+                      'handlers',
+                      'handlers_config',
+                      'collectors_config']
+
 
 @operation
 def install(ctx, diamond_config, **kwargs):
@@ -75,7 +80,10 @@ def install(ctx, diamond_config, **kwargs):
 
 @operation
 def uninstall(ctx, **kwargs):
-    pass
+    paths = ctx.instance.runtime_properties['diamond_paths']
+    for path_name in _PATHS_TO_CLEAN_UP:
+        delete_path(ctx, paths[path_name])
+    delete_path(ctx, os.path.join(paths['config'], CONFIG_NAME))
 
 
 @operation
@@ -375,3 +383,17 @@ def get_host_ctx(ctx):
 def get_host_id(ctx):
     ctx.instance._get_node_instance_if_needed()
     return ctx.instance._node_instance.host_id
+
+
+def delete_path(ctx, path):
+    try:
+        if os.path.isdir(path):
+            rmtree(path)
+        else:
+            os.remove(path)
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            ctx.logger.info("Couldn't delete path: "
+                            "{}, already doesn't exist".format(path))
+        else:
+            raise
