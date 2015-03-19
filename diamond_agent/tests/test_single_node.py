@@ -201,7 +201,7 @@ class TestSingleNode(TestCase):
         for path_name in _PATHS_TO_CLEAN_UP:
             path = os.path.join(prefix, path_name)
             self.assertFalse(os.path.exists(path),
-                             msg="Path exists: {}".format(path))
+                             msg="Path exists: {0}".format(path))
 
     def test_no_handlers(self):
         inputs = {

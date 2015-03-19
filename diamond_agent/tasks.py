@@ -394,6 +394,6 @@ def delete_path(ctx, path):
     except OSError as e:
         if e.errno == os.errno.ENOENT:
             ctx.logger.info("Couldn't delete path: "
-                            "{}, already doesn't exist".format(path))
+                            "{0}, already doesn't exist".format(path))
         else:
             raise
