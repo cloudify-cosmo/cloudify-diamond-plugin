@@ -9,7 +9,6 @@ import psutil
 
 from cloudify.workflows import local
 from diamond_agent.tasks import _PATHS_TO_CLEAN_UP
-from diamond_agent.tasks import get_paths
 
 
 class TestSingleNode(TestCase):
