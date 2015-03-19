@@ -25,7 +25,6 @@ node_templates:
                         diamond_config: { get_input: diamond_config }
                 start: diamond.diamond_agent.tasks.start
                 stop: diamond.diamond_agent.tasks.stop
-                uninstall: diamond.diamond_agent.tasks.uninstall
 
     subnode:
         type: cloudify.nodes.Root
