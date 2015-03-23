@@ -8,7 +8,7 @@ from testtools import TestCase, ExpectedException
 import psutil
 
 from cloudify.workflows import local
-from diamond_agent.tasks import _PATHS_TO_CLEAN_UP
+from diamond_agent.tasks import CONFIG_NAME
 
 
 class TestSingleNode(TestCase):
@@ -190,6 +190,12 @@ class TestSingleNode(TestCase):
         with open(pid_file, 'r') as pf:
             pid = int(pf.read())
 
+        # Check if all directories and paths were created during install
+        paths_to_uninstall = self._get_paths(prefix)
+        for path in paths_to_uninstall:
+            self.assertTrue(os.path.exists(path),
+                            msg="Path doesn't exist: {0}".format(path))
+
         if psutil.pid_exists(pid):
             self.env.execute('uninstall', task_retries=0)
             time.sleep(5)
@@ -198,8 +204,7 @@ class TestSingleNode(TestCase):
         self.assertFalse(psutil.pid_exists(pid))
 
         # Check if uninstall cleans up after diamond
-        for path_name in _PATHS_TO_CLEAN_UP:
-            path = os.path.join(prefix, path_name)
+        for path in paths_to_uninstall:
             self.assertFalse(os.path.exists(path),
                              msg="Path exists: {0}".format(path))
 
@@ -215,6 +220,15 @@ class TestSingleNode(TestCase):
         self.env = self._create_env(inputs)
         with ExpectedException(RuntimeError, ".*Empty handlers dict"):
             self.env.execute('install', task_retries=0)
+
+    def _get_paths(self, prefix):
+        return [
+            os.path.join(prefix, 'etc', CONFIG_NAME),
+            os.path.join(prefix, 'etc', 'collectors'),
+            os.path.join(prefix, 'collectors'),
+            os.path.join(prefix, 'etc', 'handlers'),
+            os.path.join(prefix, 'handlers')
+        ]
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(),
