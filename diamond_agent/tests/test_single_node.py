@@ -190,8 +190,8 @@ class TestSingleNode(TestCase):
         with open(pid_file, 'r') as pf:
             pid = int(pf.read())
 
-        # Check if all directories and paths were created during install
-        paths_to_uninstall = self._get_paths(prefix)
+        # Check if all directories and paths have been created during install
+        paths_to_uninstall = self._mock_get_paths(prefix)
         for path in paths_to_uninstall:
             self.assertTrue(os.path.exists(path),
                             msg="Path doesn't exist: {0}".format(path))
@@ -221,7 +221,7 @@ class TestSingleNode(TestCase):
         with ExpectedException(RuntimeError, ".*Empty handlers dict"):
             self.env.execute('install', task_retries=0)
 
-    def _get_paths(self, prefix):
+    def _mock_get_paths(self, prefix):
         return [
             os.path.join(prefix, 'etc', CONFIG_NAME),
             os.path.join(prefix, 'etc', 'collectors'),
