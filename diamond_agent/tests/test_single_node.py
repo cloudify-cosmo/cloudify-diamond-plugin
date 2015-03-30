@@ -8,6 +8,7 @@ from testtools import TestCase, ExpectedException
 import psutil
 
 from cloudify.workflows import local
+from diamond_agent.tasks import CONFIG_NAME
 
 
 class TestSingleNode(TestCase):
@@ -181,13 +182,19 @@ class TestSingleNode(TestCase):
             'collectors_config': {},
 
         }
+        prefix = inputs['diamond_config']['prefix']
         self.is_uninstallable = False
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
-        pid_file = os.path.join(inputs['diamond_config']['prefix'],
-                                'var', 'run', 'diamond.pid')
+        pid_file = os.path.join(prefix, 'var', 'run', 'diamond.pid')
         with open(pid_file, 'r') as pf:
             pid = int(pf.read())
+
+        # Check if all directories and paths have been created during install
+        paths_to_uninstall = self._mock_get_paths(prefix)
+        for path in paths_to_uninstall:
+            self.assertTrue(os.path.exists(path),
+                            msg="Path doesn't exist: {0}".format(path))
 
         if psutil.pid_exists(pid):
             self.env.execute('uninstall', task_retries=0)
@@ -195,6 +202,11 @@ class TestSingleNode(TestCase):
         else:
             self.fail('diamond process not running')
         self.assertFalse(psutil.pid_exists(pid))
+
+        # Check if uninstall cleans up after diamond
+        for path in paths_to_uninstall:
+            self.assertFalse(os.path.exists(path),
+                             msg="Path exists: {0}".format(path))
 
     def test_no_handlers(self):
         inputs = {
@@ -208,6 +220,15 @@ class TestSingleNode(TestCase):
         self.env = self._create_env(inputs)
         with ExpectedException(RuntimeError, ".*Empty handlers dict"):
             self.env.execute('install', task_retries=0)
+
+    def _mock_get_paths(self, prefix):
+        return [
+            os.path.join(prefix, 'etc', CONFIG_NAME),
+            os.path.join(prefix, 'etc', 'collectors'),
+            os.path.join(prefix, 'collectors'),
+            os.path.join(prefix, 'etc', 'handlers'),
+            os.path.join(prefix, 'handlers')
+        ]
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(),
