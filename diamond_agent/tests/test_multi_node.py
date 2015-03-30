@@ -116,6 +116,9 @@ class TestMultiNode(testtools.TestCase):
         self.assertEqual(ConfigObj(cpu_collector_conf)['some'], 'property')
         self.assertEqual(ConfigObj(cpu_collector_conf)['enabled'], 'True')
 
+        # Uninstall operation is removed from blueprint so
+        # the files needed for the test aren't deleted.
+        # The test tests only the stop operation logic.
         self.env.execute('uninstall', task_retries=0)
 
         self.assertFalse(os.path.isfile(test_collector_conf))
