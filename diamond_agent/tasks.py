@@ -42,8 +42,8 @@ DEFAULT_HANDLERS = {
             'port': 5672,
             'topic_exchange': 'cloudify-monitoring',
             'vhost': '/',
-            'user': 'guest',
-            'password': 'guest',
+            'user': 'cloudify',
+            'password': 'cl10dify',
         }
     }
 }
