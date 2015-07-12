@@ -43,7 +43,7 @@ DEFAULT_HANDLERS = {
             'topic_exchange': 'cloudify-monitoring',
             'vhost': '/',
             'user': 'cloudify',
-            'password': 'cl10dify',
+            'password': 'c10udify',
         }
     }
 }
