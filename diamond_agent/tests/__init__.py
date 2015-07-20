@@ -12,3 +12,10 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+IGNORED_LOCAL_WORKFLOW_MODULES = (
+    'worker_installer.tasks',
+    'plugin_installer.tasks',
+    'cloudify_agent.operations',
+    'cloudify_agent.installer.operations',
+)

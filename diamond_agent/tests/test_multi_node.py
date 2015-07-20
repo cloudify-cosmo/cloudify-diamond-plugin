@@ -8,6 +8,8 @@ from configobj import ConfigObj
 
 from cloudify.workflows import local
 
+from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
+
 
 class TestMultiNode(testtools.TestCase):
     def setUp(self):
@@ -128,8 +130,7 @@ class TestMultiNode(testtools.TestCase):
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(),
                               inputs=inputs,
-                              ignored_modules=['worker_installer.tasks',
-                                               'plugin_installer.tasks'])
+                              ignored_modules=IGNORED_LOCAL_WORKFLOW_MODULES)
 
     def _blueprint_path(self):
         return self._get_resource_path('blueprint', 'multi_node.yaml')
