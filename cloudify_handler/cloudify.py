@@ -13,12 +13,18 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+# Absolute imports required to import cloudify.constants due to naming of this
+# file
+from __future__ import absolute_import
+
+from cloudify import broker_config, utils
 from diamond.handler.rabbitmq_topic import rmqHandler
-from format import jsonify
 try:
     import pika
 except ImportError:
     pika = None
+
+from cloudify_handler.format import jsonify
 
 
 class CloudifyHandler(rmqHandler):
@@ -29,10 +35,21 @@ class CloudifyHandler(rmqHandler):
            to set auto_delete=True)
         """
         credentials = pika.PlainCredentials(self.user, self.password)
+
+        ssl_enabled = broker_config.broker_ssl_enabled
+
+        broker_port, ssl_options = utils.internal.get_broker_ssl_and_port(
+            ssl_enabled=ssl_enabled,
+            cert_path=broker_config.broker_cert_path,
+        )
+
         params = pika.ConnectionParameters(credentials=credentials,
                                            host=self.server,
                                            virtual_host=self.vhost,
-                                           port=self.port)
+                                           port=broker_port,
+                                           ssl=ssl_enabled,
+                                           ssl_options=ssl_options)
+
         self.connection = pika.BlockingConnection(params)
         self.channel = self.connection.channel()
         self.channel.exchange_declare(exchange=self.topic_exchange,
