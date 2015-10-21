@@ -27,8 +27,9 @@ from psutil import pid_exists
 from configobj import ConfigObj
 
 from cloudify.decorators import operation
-from cloudify.utils import get_manager_ip
 from cloudify import exceptions
+from cloudify.utils import get_manager_ip
+from cloudify import utils
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
@@ -220,8 +221,24 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     """
     if handlers is None:
         handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
-        handlers['cloudify_handler.cloudify.CloudifyHandler']['config'][
-            'server'] = get_manager_ip()
+
+        # If we do not have a real manager cloudify_agent is expected to be an
+        # empty dict. This will be handled by get_broker_credentials.
+        cloudify_agent = ctx.bootstrap_context.cloudify_agent
+
+        broker_user, broker_pass = utils.internal.get_broker_credentials(
+            cloudify_agent
+        )
+
+        config_changes = {
+            'server': get_manager_ip(),
+            'user': broker_user,
+            'password': broker_pass,
+        }
+
+        handlers['cloudify_handler.cloudify.CloudifyHandler'][
+            'config'].update(config_changes)
+
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
