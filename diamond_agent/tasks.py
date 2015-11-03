@@ -34,7 +34,7 @@ from cloudify import utils
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
 DEFAULT_INTERVAL = 10
-DEFAULT_TIMEOUT = 10
+DEFAULT_TIMEOUT = 30
 
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
