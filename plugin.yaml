@@ -6,3 +6,5 @@ plugins:
     diamond:
         executor: host_agent
         source: https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/1.3rc1.zip
+        package_name: cloudify-diamond-plugin
+        package_version: 1.3rc1
