@@ -44,7 +44,7 @@ class CloudifyHandler(rmqHandler):
         )
 
         params = pika.ConnectionParameters(credentials=credentials,
-                                           host=self.server,
+                                           host=broker_config.broker_hostname,
                                            virtual_host=self.vhost,
                                            port=broker_port,
                                            ssl=ssl_enabled,
