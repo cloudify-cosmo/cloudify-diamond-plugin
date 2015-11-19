@@ -11,6 +11,6 @@ test:
     - tox -e py27
     - tox -e py26
 
-# notify:
-#   flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
+#notify:
+#  flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
 
