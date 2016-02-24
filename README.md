@@ -7,5 +7,5 @@
 
 Cloudify [Diamond](https://github.com/BrightcoveOS/Diamond) monitoring plugin.
 
-See [Diamond Plugin](http://getcloudify.org/guide/plugin-diamond.html)
+See [Diamond Plugin](http://docs.getcloudify.org/latest/plugins/diamond)
 
