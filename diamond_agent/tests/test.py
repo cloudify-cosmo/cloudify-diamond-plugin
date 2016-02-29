@@ -14,33 +14,51 @@
 #  * limitations under the License.
 
 import os
-import mock
 import unittest
 import tempfile
+
+import mock
+
+from cloudify import state
 
 import diamond_agent.tasks as tasks
 
 
 class TestHelperFunctions(unittest.TestCase):
-    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
-    def test_get_paths_with_prefix(self, _):
-        prefix = tempfile.mktemp()
-        paths = tasks.get_paths(prefix)
-        for path in paths.values():
-            self.assertTrue(path.startswith(prefix))
 
-    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
-    def test_get_paths_with_env(self, _):
-        prefix = tempfile.mktemp()
+    def test_get_paths_with_prefix(self):
+        prefix = '/my/mock/prefix'
+        self._test(expected_prefix=prefix, get_paths_arg=prefix)
+
+    def test_get_paths_with_env_plugin_workdir(self):
+        prefix = '/my/mock/prefix'
         with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': prefix}):
-            paths = tasks.get_paths(None)
-        for path in paths.values():
-            self.assertTrue(path.startswith(os.path.split(prefix)[0]))
+            ctx = mock.MagicMock()
+            ctx.plugin = mock.MagicMock()
+            ctx.plugin.workdir = prefix
+            state.current_ctx.set(ctx)
+            try:
+                self._test(expected_prefix=prefix)
+            finally:
+                state.current_ctx.clear()
 
-    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
-    def test_get_paths_without_env(self, _):
+    def test_get_paths_with_env_fallback_workdir(self):
+        prefix = '/my/mock/prefix'
+        with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': prefix}):
+            state.current_ctx.set(object())
+            try:
+                self._test(expected_prefix=os.path.join(prefix, 'diamond'))
+            finally:
+                state.current_ctx.clear()
+
+    def test_get_paths_without_env(self):
         prefix = os.path.join(tempfile.gettempdir(), 'cloudify-monitoring-')
         with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': ''}):
-            paths = tasks.get_paths(None)
+            self._test(expected_prefix=prefix)
+
+    @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
+    def _test(self, _, expected_prefix, get_paths_arg=None):
+        paths = tasks.get_paths(get_paths_arg)
+        self.assertTrue(len(paths) > 0)
         for path in paths.values():
-            self.assertTrue(path.startswith(prefix))
+            self.assertTrue(path.startswith(expected_prefix))
