@@ -26,6 +26,7 @@ from subprocess import call
 from psutil import pid_exists
 from configobj import ConfigObj
 
+from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify import exceptions
 from cloudify.utils import get_manager_ip
@@ -71,9 +72,9 @@ def install(ctx, diamond_config, **kwargs):
                   interval=interval,
                   paths=paths)
 
-    copy_content(os.path.join(sys.prefix, 'share', 'diamond', 'collectors'),
+    copy_content(os.path.join(_prefix(), 'share', 'diamond', 'collectors'),
                  paths['collectors'])
-    copy_content(os.path.join(sys.prefix, 'etc', 'diamond', 'collectors'),
+    copy_content(os.path.join(_prefix(), 'etc', 'diamond', 'collectors'),
                  paths['collectors_config'])
 
     disable_all_collectors(paths['collectors_config'])
@@ -204,7 +205,7 @@ def disable_collectors(ctx, collectors, config_path, collectors_path):
             rmtree(collector_dir)
             os.remove(config_full_path)
         else:
-            original_collector = os.path.join(sys.prefix, 'etc', 'diamond',
+            original_collector = os.path.join(_prefix(), 'etc', 'diamond',
                                               'collectors',
                                               '{0}.conf'.format(name))
             copy(original_collector, config_path)
@@ -289,11 +290,7 @@ def get_paths(prefix):
     creates folder structure and returns dict with full paths
     """
     if prefix is None:
-        if os.environ.get('CELERY_WORK_DIR'):
-            prefix = os.path.split(os.environ.get('CELERY_WORK_DIR'))[0]
-            prefix = os.path.join(prefix, 'diamond')
-        else:
-            prefix = mkdtemp(prefix='cloudify-monitoring-')
+        prefix = _calc_workdir()
 
     paths = {
         'config': os.path.join(prefix, 'etc'),
@@ -414,3 +411,32 @@ def delete_path(ctx, path):
                             "{0}, already doesn't exist".format(path))
         else:
             raise
+
+
+def _prefix():
+    try:
+        test_suffix = os.path.join('share', 'diamond', 'collectors')
+        prefix = ctx.plugin.prefix
+        if os.path.exists(os.path.join(prefix, test_suffix)):
+            return prefix
+        else:
+            # This happens if diamond plugin is installed in the agent package.
+            # In this case, the plugin.prefix dir will exist but will be empty.
+            return sys.prefix
+    except AttributeError:
+        # Support older versions of cloudify-plugins-common
+        return sys.prefix
+
+
+def _calc_workdir():
+    # Used to check if we are inside an agent environment
+    celery_workdir = os.environ.get('CELERY_WORK_DIR')
+    if celery_workdir:
+        try:
+            workdir = ctx.plugin.workdir
+        except AttributeError:
+            # Support older versions of cloudify-plugins-common
+            workdir = os.path.join(celery_workdir, 'diamond')
+    else:  # Used by tests
+        workdir = mkdtemp(prefix='cloudify-monitoring-')
+    return workdir

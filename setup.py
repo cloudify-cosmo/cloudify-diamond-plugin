@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-diamond-plugin',
-    version='1.3.1',
+    version='1.3.2',
     author='Cloudify',
     author_email='cosmo-admin@gigaspaces.com',
     description='Cloudify Diamond monitoring plugin',
