@@ -8,30 +8,45 @@ plugins:
         executor: central_deployment_agent
         install: false
 
-inputs:
-    diamond_config: {}
-    collectors_config: {}
+relationships:
+    myrel:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                establish:
+                    executor: central_deployment_agent
+                    implementation: diamond.diamond_agent.tests.test_single_node.sleep_and_restart_diamond
 
 node_templates:
-    node:
+    node1:
         type: cloudify.nodes.Compute
         properties:
             install_agent: false
+
+    node2:
+        type: cloudify.nodes.Compute
+        properties:
+            install_agent: false        
+        relationships:
+            - type: myrel
+              target: node1
         interfaces:
             cloudify.interfaces.monitoring_agent:
                 install:
                     implementation: diamond.diamond_agent.tasks.install
                     inputs:
-                        diamond_config: { get_input: diamond_config }
+                        diamond_config: {}
                 start: diamond.diamond_agent.tasks.start
                 stop: diamond.diamond_agent.tasks.stop
                 uninstall: diamond.diamond_agent.tasks.uninstall
             cloudify.interfaces.monitoring:
                 start:
                     implementation: diamond.diamond_agent.tasks.add_collectors
+                    executor: central_deployment_agent
                     inputs:
-                        collectors_config: { get_input: collectors_config }
+                        collectors_config: {}
                 stop:
                     implementation: diamond.diamond_agent.tasks.del_collectors
+                    executor: central_deployment_agent
                     inputs:
-                        collectors_config: { get_input: collectors_config }
+                        collectors_config: {}

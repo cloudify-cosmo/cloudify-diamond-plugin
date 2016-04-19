@@ -7,9 +7,11 @@ from testtools import TestCase, ExpectedException
 
 import psutil
 
+from cloudify.decorators import operation
 from cloudify.workflows import local
 from diamond_agent.tasks import CONFIG_NAME
 
+from diamond_agent.tasks import restart_diamond
 from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
 
 
@@ -223,6 +225,23 @@ class TestSingleNode(TestCase):
         with ExpectedException(RuntimeError, ".*Empty handlers dict"):
             self.env.execute('install', task_retries=0)
 
+    def test_restart_plugin_script(self):
+        """A script that restarts diamond doesn't interfere with the plugin.
+
+        If the add_collectors tasks run in parallel with a script that
+        also happens to restart diamond, there's a race condition between them
+        looking up the process by the PID, making one of them to break.
+        """
+        blueprint_yaml = self._get_resource_path('blueprint',
+                                                 'restart_diamond_script.yaml')
+        self.is_uninstallable = False
+        local_env = local.init_env(
+            blueprint_yaml, ignored_modules=IGNORED_LOCAL_WORKFLOW_MODULES)
+        self.addCleanup(local_env.execute, 'uninstall')
+        # this needs a threadpool size >1 so that the add_collectors task
+        # can run in parallel with the custom restart task
+        local_env.execute('install', task_thread_pool_size=5)
+
     def _mock_get_paths(self, prefix):
         return [
             os.path.join(prefix, 'etc', CONFIG_NAME),
@@ -277,3 +296,16 @@ def get_pid(config):
         pid = int(pf.read())
 
     return pid
+
+
+@operation
+def sleep_and_restart_diamond(ctx):
+    """Restart diamond 5 times, with 3 second pauses between restarts.
+
+    This is a task used in the TestSingleNode.test_restart_plugin_script test.
+    """
+    config = ctx.source.instance.runtime_properties['diamond_paths']['config']
+
+    for num in range(5):
+        time.sleep(3)
+        restart_diamond(config)
