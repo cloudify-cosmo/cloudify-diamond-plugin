@@ -18,12 +18,11 @@ import sys
 import copy as copy_objects
 from glob import glob
 from time import sleep
-from signal import SIGTERM
 from shutil import copytree, copy, rmtree
 from tempfile import mkdtemp
 from subprocess import call
 
-from psutil import pid_exists
+from psutil import pid_exists, Process
 from configobj import ConfigObj
 
 from cloudify import ctx
@@ -136,8 +135,7 @@ def start_diamond(conf_path):
     if not os.path.isfile(config_file):
         raise exceptions.NonRecoverableError("Config file doesn't exists")
 
-    cmd = 'diamond --configfile {0}'.format(config_file)
-    return_code = call(cmd.split())
+    return_code = call(['diamond', '--configfile', config_file])
     if return_code != 0:
         raise exceptions.NonRecoverableError('Diamond agent failed to start')
 
@@ -153,12 +151,12 @@ def stop_diamond(conf_path):
     config_file = os.path.join(conf_path, CONFIG_NAME)
     pid = get_pid(config_file)
     if pid:
-        os.kill(pid, SIGTERM)
-        for _ in range(DEFAULT_TIMEOUT):
-            if not pid_exists(pid):
-                return
-            sleep(1)
-        raise exceptions.NonRecoverableError("Diamond couldn't be killed")
+        diamond_process = Process(pid)
+        diamond_process.terminate()
+        diamond_process.wait(timeout=DEFAULT_TIMEOUT)
+
+        if diamond_process.is_running():
+            raise exceptions.NonRecoverableError("Diamond couldn't be killed")
     else:
         raise exceptions.NonRecoverableError('Failed reading diamond pid file')
 
