@@ -28,7 +28,6 @@ from configobj import ConfigObj
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify import exceptions
-from cloudify.utils import get_manager_ip
 from cloudify import utils
 
 CONFIG_NAME = 'diamond.conf'
@@ -230,7 +229,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
         )
 
         config_changes = {
-            'server': get_manager_ip(),
+            'server': cloudify_agent.broker_ip,
             'user': broker_user,
             'password': broker_pass,
         }
