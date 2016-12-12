@@ -15,6 +15,7 @@
 
 import os
 import sys
+import platform
 import copy as copy_objects
 from glob import glob
 from time import sleep
@@ -76,6 +77,7 @@ def install(ctx, diamond_config, **kwargs):
                  paths['collectors_config'])
 
     disable_all_collectors(paths['collectors_config'])
+    _set_diamond_service(os.path.join(paths['config'], CONFIG_NAME))
 
 
 @operation
@@ -437,3 +439,33 @@ def _calc_workdir():
     else:  # Used by tests
         workdir = mkdtemp(prefix='cloudify-monitoring-')
     return workdir
+
+
+def _set_diamond_service(config_file):
+    target = '/etc/init.d/diamond'
+    if os.path.exists(target):
+        return
+
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    source = os.path.join(curr_dir, 'resources', 'diamond')
+    diamond_path = '{0}/env/bin/diamond'.format(curr_dir.split('/env/', 1)[0])
+
+    with open(source, 'r') as t:
+        old_content = t.read()
+    new_content = old_content.replace(
+        '{{ CMD }}',
+        'sudo {0} --configfile {1}'.format(diamond_path, config_file))
+    with open(source, 'w') as t:
+        t.write(new_content)
+
+    call(['sudo', 'mv', source, target])
+    call(['sudo', 'chmod', '555', target])
+    with open(source, 'w') as t:
+        t.write(old_content)
+
+    if 'centos' in platform.platform().lower():
+        call(['sudo', 'chkconfig', '--add', 'diamond'])
+    else:
+        call(['sudo', 'update-rc.d', '-f', 'diamond', 'remove'])
+        call(['sudo', 'update-rc.d', 'diamond', 'defaults'])
+        call(['sudo', 'update-rc.d', 'diamond', 'enable'])
