@@ -35,6 +35,7 @@ CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
 DEFAULT_INTERVAL = 10
 DEFAULT_TIMEOUT = 10
+DIAMOND_TARGET_PATH = '/etc/init.d/diamond'
 
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
@@ -82,6 +83,7 @@ def install(ctx, diamond_config, **kwargs):
 
 @operation
 def uninstall(ctx, **kwargs):
+    _unset_diamond_service()
     paths = ctx.instance.runtime_properties['diamond_paths']
     for path_name in _PATHS_TO_CLEAN_UP:
         delete_path(ctx, paths[path_name])
@@ -442,8 +444,7 @@ def _calc_workdir():
 
 
 def _set_diamond_service(config_file):
-    target = '/etc/init.d/diamond'
-    if os.path.exists(target):
+    if os.path.exists(DIAMOND_TARGET_PATH):
         return
 
     curr_dir = os.path.dirname(os.path.abspath(__file__))
@@ -458,8 +459,8 @@ def _set_diamond_service(config_file):
     with open(source, 'w') as t:
         t.write(new_content)
 
-    call(['sudo', 'mv', source, target])
-    call(['sudo', 'chmod', '555', target])
+    call(['sudo', 'mv', source, DIAMOND_TARGET_PATH])
+    call(['sudo', 'chmod', '555', DIAMOND_TARGET_PATH])
     with open(source, 'w') as t:
         t.write(old_content)
 
@@ -469,3 +470,11 @@ def _set_diamond_service(config_file):
         call(['sudo', 'update-rc.d', '-f', 'diamond', 'remove'])
         call(['sudo', 'update-rc.d', 'diamond', 'defaults'])
         call(['sudo', 'update-rc.d', 'diamond', 'enable'])
+
+
+def _unset_diamond_service():
+    if 'centos' in platform.platform().lower():
+        call(['sudo', 'chkconfig', '--del', 'diamond'])
+    else:
+        call(['sudo', 'update-rc.d', '-f', 'diamond', 'remove'])
+    call(['sudo', 'rm', '-rf', DIAMOND_TARGET_PATH])
