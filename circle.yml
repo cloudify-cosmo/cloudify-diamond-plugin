@@ -25,3 +25,7 @@ deployment:
     tag: /.*/
     commands:
       - (true) 
+
+general:
+  artifacts:
+    - .tox/docs/tmp/html

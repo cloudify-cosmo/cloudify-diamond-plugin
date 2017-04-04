@@ -3,27 +3,33 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to cloudify-diamond-plugin's documentation!
-===================================================
+Cloudify Diamond Plugin
+^^^^^^^^^^^^^^^^^^^^^^^
 
-Contents:
+Diamond plugin is used to install & configure a
+`Diamond <https://github.com/BrightcoveOS/Diamond>`_
+monitoring agent (version 3.5) on hosts.
+
+Diamond is a python daemon
+that collects system metrics and publishes them to multiple destinations.
+It is capable of collecting cpu, memory, network, i/o,
+load and disk metrics as well as many other metrics as specified in the
+`docs <https://github.com/BrightcoveOS/Diamond/wiki/Collectors>`_.
+Additionally, it features an API for implementing custom collectors
+for gathering metrics from almost any source.
+
+
+Contents
+========
 
 .. toctree::
-   :maxdepth: 2
 
-.. automodule:: diamond_agent.tasks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. automodule:: cloudify_handler.cloudify
-   :members:
-   :undoc-members:
-   :show-inheritance:
+    requirements
+    usage
+    examples
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
