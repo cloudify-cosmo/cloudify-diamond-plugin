@@ -228,7 +228,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
         # empty dict. This will be handled by get_broker_credentials.
         cloudify_agent = ctx.bootstrap_context.cloudify_agent
 
-        broker_user, broker_pass = utils.internal.get_broker_credentials(
+        broker_user, broker_pass, _ = utils.internal.get_broker_credentials(
             cloudify_agent
         )
 
