@@ -5,11 +5,12 @@ import cPickle
 import tempfile
 from testtools import TestCase, ExpectedException
 
+import mock
 import psutil
 
-from cloudify.decorators import operation
+from diamond_agent import tasks
 from cloudify.workflows import local
-from diamond_agent.tasks import CONFIG_NAME
+from cloudify.decorators import operation
 
 from diamond_agent.tasks import restart_diamond
 from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
@@ -21,6 +22,9 @@ class TestSingleNode(TestCase):
         os.environ['MANAGEMENT_IP'] = '127.0.0.1'
         self.is_uninstallable = True
         self.env = None
+        self._original_get_agent_name = tasks._get_agent_name
+        tasks._get_agent_name = mock.MagicMock(return_value='agent_name')
+        self.addCleanup(self._unmock_agent_name)
 
     def tearDown(self):
         super(TestSingleNode, self).tearDown()
@@ -244,7 +248,7 @@ class TestSingleNode(TestCase):
 
     def _mock_get_paths(self, prefix):
         return [
-            os.path.join(prefix, 'etc', CONFIG_NAME),
+            os.path.join(prefix, 'etc', tasks.CONFIG_NAME),
             os.path.join(prefix, 'etc', 'collectors'),
             os.path.join(prefix, 'collectors'),
             os.path.join(prefix, 'etc', 'handlers'),
@@ -261,6 +265,9 @@ class TestSingleNode(TestCase):
 
     def _get_resource_path(self, *args):
         return os.path.join(os.path.dirname(__file__), 'resources', *args)
+
+    def _unmock_agent_name(self):
+        tasks._get_agent_name = self._original_get_agent_name
 
 
 def collector_in_log(path, collector):

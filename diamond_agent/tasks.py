@@ -35,7 +35,6 @@ CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
 DEFAULT_INTERVAL = 10
 DEFAULT_TIMEOUT = 10
-DIAMOND_TARGET_PATH = '/etc/init.d/diamond'
 
 DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
@@ -78,12 +77,12 @@ def install(ctx, diamond_config, **kwargs):
                  paths['collectors_config'])
 
     disable_all_collectors(paths['collectors_config'])
-    _set_diamond_service(os.path.join(paths['config'], CONFIG_NAME))
+    _set_diamond_service(ctx, os.path.join(paths['config'], CONFIG_NAME))
 
 
 @operation
 def uninstall(ctx, **kwargs):
-    _unset_diamond_service()
+    _unset_diamond_service(ctx)
     paths = ctx.instance.runtime_properties['diamond_paths']
     for path_name in _PATHS_TO_CLEAN_UP:
         delete_path(ctx, paths[path_name])
@@ -443,12 +442,23 @@ def _calc_workdir():
     return workdir
 
 
-def _set_diamond_service(config_file):
-    if os.path.exists(DIAMOND_TARGET_PATH):
-        return
+def _get_agent_name(ctx):
+    return ctx.instance.runtime_properties['cloudify_agent']['name']
 
+
+def _get_service_name(ctx):
+    return 'diamond_{0}'.format(_get_agent_name(ctx))
+
+
+def _get_service_file_path(ctx):
+    return os.path.join('/etc/init.d', _get_service_name(ctx))
+
+
+def _set_diamond_service(ctx, config_file):
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     source = os.path.join(curr_dir, 'resources', 'diamond')
+    target = _get_service_file_path(ctx)
+    service_name = _get_service_name(ctx)
     diamond_path = '{0}/env/bin/diamond'.format(curr_dir.split('/env/', 1)[0])
 
     with open(source, 'r') as t:
@@ -459,22 +469,24 @@ def _set_diamond_service(config_file):
     with open(source, 'w') as t:
         t.write(new_content)
 
-    call(['sudo', 'mv', source, DIAMOND_TARGET_PATH])
-    call(['sudo', 'chmod', '555', DIAMOND_TARGET_PATH])
+    call(['sudo', 'mv', source, target])
+    call(['sudo', 'chmod', '555', target])
     with open(source, 'w') as t:
         t.write(old_content)
 
     if 'centos' in platform.platform().lower():
-        call(['sudo', 'chkconfig', '--add', 'diamond'])
+        call(['sudo', 'chkconfig', '--add', service_name])
     else:
-        call(['sudo', 'update-rc.d', '-f', 'diamond', 'remove'])
-        call(['sudo', 'update-rc.d', 'diamond', 'defaults'])
-        call(['sudo', 'update-rc.d', 'diamond', 'enable'])
+        call(['sudo', 'update-rc.d', '-f', service_name, 'remove'])
+        call(['sudo', 'update-rc.d', service_name, 'defaults'])
+        call(['sudo', 'update-rc.d', service_name, 'enable'])
 
 
-def _unset_diamond_service():
+def _unset_diamond_service(ctx):
+    service_name = _get_service_name(ctx)
+    service_file_path = _get_service_file_path(ctx)
     if 'centos' in platform.platform().lower():
-        call(['sudo', 'chkconfig', '--del', 'diamond'])
+        call(['sudo', 'chkconfig', '--del', service_name])
     else:
-        call(['sudo', 'update-rc.d', '-f', 'diamond', 'remove'])
-    call(['sudo', 'rm', '-rf', DIAMOND_TARGET_PATH])
+        call(['sudo', 'update-rc.d', '-f', service_name, 'remove'])
+    call(['sudo', 'rm', '-rf', service_file_path])
