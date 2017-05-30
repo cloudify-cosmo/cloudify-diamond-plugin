@@ -4,9 +4,13 @@ import cPickle
 import testtools
 import tempfile
 
+import mock
+
 from configobj import ConfigObj
 
 from cloudify.workflows import local
+
+from diamond_agent import tasks
 
 from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
 
@@ -17,11 +21,14 @@ class TestMultiNode(testtools.TestCase):
         os.environ['MANAGEMENT_IP'] = '127.0.0.1'
         self.is_uninstallable = True
         self.env = None
+        self._original_get_agent_name = tasks._get_agent_name
+        tasks._get_agent_name = mock.MagicMock(return_value='agent_name')
 
     def tearDown(self):
         super(TestMultiNode, self).tearDown()
         if self.env and self.is_uninstallable:
             self.env.execute('uninstall', task_retries=0)
+        tasks._get_agent_name = self._original_get_agent_name
 
     def test_custom_collectors(self):
         log_path = tempfile.mktemp()
