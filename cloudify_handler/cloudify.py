@@ -38,7 +38,7 @@ class CloudifyHandler(rmqHandler):
 
         ssl_enabled = broker_config.broker_ssl_enabled
 
-        broker_port, ssl_options = utils.internal.get_broker_ssl_and_port(
+        ssl_options = utils.internal.get_broker_ssl_options(
             ssl_enabled=ssl_enabled,
             cert_path=broker_config.broker_cert_path,
         )
@@ -46,7 +46,7 @@ class CloudifyHandler(rmqHandler):
         params = pika.ConnectionParameters(credentials=credentials,
                                            host=broker_config.broker_hostname,
                                            virtual_host=self.vhost,
-                                           port=broker_port,
+                                           port=self.port,
                                            ssl=ssl_enabled,
                                            ssl_options=ssl_options)
 

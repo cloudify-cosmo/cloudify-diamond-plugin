@@ -28,8 +28,7 @@ from configobj import ConfigObj
 
 from cloudify import ctx
 from cloudify.decorators import operation
-from cloudify import exceptions
-from cloudify import utils
+from cloudify import exceptions, utils, constants
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
@@ -40,7 +39,7 @@ DEFAULT_HANDLERS = {
     'cloudify_handler.cloudify.CloudifyHandler': {
         'config': {
             'server': 'localhost',
-            'port': 5672,
+            'port': constants.BROKER_PORT_SSL,
             'topic_exchange': 'cloudify-monitoring',
             'vhost': '/',
             'user': 'guest',
@@ -465,7 +464,9 @@ def _set_diamond_service(ctx, config_file):
         old_content = t.read()
     new_content = old_content.replace(
         '{{ CMD }}',
-        'sudo {0} --configfile {1}'.format(diamond_path, config_file))
+        '{0} --configfile {1}'.format(diamond_path, config_file))
+    new_content = new_content.replace('{{ WORK_DIR }}',
+                                      os.environ.get('CELERY_WORK_DIR', ''))
     with open(source, 'w') as t:
         t.write(new_content)
 
