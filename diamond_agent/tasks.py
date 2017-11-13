@@ -475,7 +475,8 @@ def _set_diamond_service(ctx, config_file):
     with open(source, 'w') as t:
         t.write(old_content)
 
-    if 'centos' in platform.platform().lower():
+    current_platform = platform.platform().lower()
+    if any([distro in current_platform for distro in ['centos', 'redhat']]):
         call(['sudo', 'chkconfig', '--add', service_name])
     else:
         call(['sudo', 'update-rc.d', '-f', service_name, 'remove'])
@@ -486,7 +487,8 @@ def _set_diamond_service(ctx, config_file):
 def _unset_diamond_service(ctx):
     service_name = _get_service_name(ctx)
     service_file_path = _get_service_file_path(ctx)
-    if 'centos' in platform.platform().lower():
+    current_platform = platform.platform().lower()
+    if any([distro in current_platform for distro in ['centos', 'redhat']]):
         call(['sudo', 'chkconfig', '--del', service_name])
     else:
         call(['sudo', 'update-rc.d', '-f', service_name, 'remove'])
