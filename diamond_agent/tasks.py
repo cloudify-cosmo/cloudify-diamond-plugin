@@ -27,6 +27,7 @@ from psutil import pid_exists, Process
 from configobj import ConfigObj
 
 from cloudify import ctx
+from cloudify.constants import CLUSTER_SETTINGS_PATH_KEY
 from cloudify.decorators import operation
 from cloudify import exceptions, utils, constants
 
@@ -467,6 +468,10 @@ def _set_diamond_service(ctx, config_file):
         '{0} --configfile {1}'.format(diamond_path, config_file))
     new_content = new_content.replace('{{ WORK_DIR }}',
                                       os.environ.get('CELERY_WORK_DIR', ''))
+    new_content = new_content.replace(
+        '{{ CLUSTER_SETTINGS_PATH }}',
+        os.environ.get(CLUSTER_SETTINGS_PATH_KEY, ''),
+    )
     with open(source, 'w') as t:
         t.write(new_content)
 
