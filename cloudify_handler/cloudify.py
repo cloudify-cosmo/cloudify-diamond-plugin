@@ -17,7 +17,11 @@
 # file
 from __future__ import absolute_import
 
-from cloudify import broker_config, utils
+from cloudify import (
+    broker_config,
+    cluster,
+    utils,
+)
 from diamond.handler.rabbitmq_topic import rmqHandler
 try:
     import pika
@@ -42,9 +46,15 @@ class CloudifyHandler(rmqHandler):
             ssl_enabled=ssl_enabled,
             cert_path=broker_config.broker_cert_path,
         )
+        # Get the cluster host if applicable
+        cluster_settings = cluster.get_cluster_amqp_settings()
+        broker_host = cluster_settings.get(
+            'amqp_host',
+            broker_config.broker_hostname
+        )
 
         params = pika.ConnectionParameters(credentials=credentials,
-                                           host=broker_config.broker_hostname,
+                                           host=broker_host,
                                            virtual_host=self.vhost,
                                            port=self.port,
                                            ssl=ssl_enabled,

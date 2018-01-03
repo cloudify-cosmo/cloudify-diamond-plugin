@@ -25,6 +25,7 @@ is_running() {
 case "$1" in
     start)
     export CELERY_WORK_DIR="{{ WORK_DIR }}"
+    export CLOUDIFY_CLUSTER_SETTINGS_PATH="{{ CLUSTER_SETTINGS_PATH }}"
     {{ CMD }}
     ;;
     stop)
