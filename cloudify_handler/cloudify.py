@@ -17,6 +17,8 @@
 # file
 from __future__ import absolute_import
 
+from time import sleep
+
 from cloudify import (
     broker_config,
     cluster,
@@ -82,3 +84,4 @@ class CloudifyHandler(rmqHandler):
             self.log.info(
                 "Failed publishing to rabbitMQ. Attempting reconnect")
             self._bind()
+            sleep(3)
