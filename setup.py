@@ -11,7 +11,7 @@ setup(
         'diamond_agent': ['resources/diamond']
     },
     license='LICENSE',
-    install_requires=['cloudify-common==4.4.dev1',
+    install_requires=['cloudify-common',
                       'diamond==3.5.0',
                       'ConfigObj==5.0.6',
                       'psutil==2.1.1'],
