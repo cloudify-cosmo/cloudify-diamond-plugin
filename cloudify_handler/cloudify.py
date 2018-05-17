@@ -32,9 +32,18 @@ except ImportError:
 
 from cloudify_handler.format import jsonify
 
-consec_err_count = 0
 
 class CloudifyHandler(rmqHandler):
+
+    sleeper = 1
+    sleeper_max = 30
+
+    def _get_sleeper(self):
+        self.sleeper = min(self.sleeper * 2, self.sleeper_max)
+        return self.sleeper
+
+    def _reset_sleeper(self):
+        self.sleeper = 1
 
     def _bind(self):
         """
@@ -82,16 +91,9 @@ class CloudifyHandler(rmqHandler):
                 routing_key=metric.getPathPrefix(),
                 body=jsonify(metric))
 
-            consec_err_count = 0
+            self._reset_sleeper()
         except Exception:  # Rough connection re-try logic.
-            if consec_err_count == 0:
-                self.log.info(
-                    "Failed publishing to rabbitMQ. Attempting reconnect")
-            # Reducing 90% of errors in logs when
-            # there is a lasting connection problem
-            elif consec_err_count == 9:
-                consec_err_count = 0
-
-            consec_err_count = consec_err_count + 1
+            self.log.info(
+                "Failed publishing to rabbitMQ. Attempting reconnect")
             self._bind()
-            sleep(3)
+            sleep(self._get_sleeper())
