@@ -81,7 +81,6 @@ class CloudifyHandler(rmqHandler):
                                       internal=False)
 
     def process(self, metric):
-        global consec_err_count
         if not pika:
             return
 
