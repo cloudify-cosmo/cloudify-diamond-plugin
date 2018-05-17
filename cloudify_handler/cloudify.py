@@ -32,6 +32,7 @@ except ImportError:
 
 from cloudify_handler.format import jsonify
 
+consec_err_count = 0
 
 class CloudifyHandler(rmqHandler):
 
@@ -71,6 +72,7 @@ class CloudifyHandler(rmqHandler):
                                       internal=False)
 
     def process(self, metric):
+        global consec_err_count
         if not pika:
             return
 
@@ -80,8 +82,16 @@ class CloudifyHandler(rmqHandler):
                 routing_key=metric.getPathPrefix(),
                 body=jsonify(metric))
 
+            consec_err_count = 0
         except Exception:  # Rough connection re-try logic.
-            self.log.info(
-                "Failed publishing to rabbitMQ. Attempting reconnect")
+            if consec_err_count == 0:
+                self.log.info(
+                    "Failed publishing to rabbitMQ. Attempting reconnect")
+            # Reducing 90% of errors in logs when
+            # there is a lasting connection problem
+            elif consec_err_count == 9:
+                consec_err_count = 0
+
+            consec_err_count = consec_err_count + 1
             self._bind()
             sleep(3)

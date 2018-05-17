@@ -356,7 +356,7 @@ def create_config(path_prefix,
             'class': 'handlers.TimedRotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'default',
-            'args': "('{0}', 'midnight', 1, 7)".format(
+            'args': "('{0}', 'midnight', 1, 2)".format(
                 os.path.join(paths['log'], 'diamond.log')),
         },
         'formatter_default': {
@@ -472,6 +472,9 @@ def _set_diamond_service(ctx, config_file):
         '{{ CLUSTER_SETTINGS_PATH }}',
         os.environ.get(CLUSTER_SETTINGS_PATH_KEY, ''),
     )
+    new_content = new_content.replace('{{ AGENT_USER }}',
+        ctx.instance.runtime_properties['cloudify_agent']['user'])
+
     with open(source, 'w') as t:
         t.write(new_content)
 
