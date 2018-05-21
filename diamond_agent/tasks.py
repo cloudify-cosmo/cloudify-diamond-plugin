@@ -162,7 +162,7 @@ def stop_diamond(conf_path):
         except Error:
             pass
         if need_kill:
-            call(["sudo","kill",str(pid)])
+            call(["sudo", "kill", str(pid)])
     else:
         raise exceptions.NonRecoverableError('Failed reading diamond pid file')
 
