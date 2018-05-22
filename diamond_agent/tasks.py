@@ -430,13 +430,13 @@ def _prefix():
 
 def _calc_workdir():
     # Used to check if we are inside an agent environment
-    celery_workdir = os.environ.get('CELERY_WORK_DIR')
-    if celery_workdir:
+    agent_workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY)
+    if agent_workdir:
         try:
             workdir = ctx.plugin.workdir
         except AttributeError:
             # Support older versions of cloudify-plugins-common
-            workdir = os.path.join(celery_workdir, 'diamond')
+            workdir = os.path.join(agent_workdir, 'diamond')
     else:  # Used by tests
         workdir = mkdtemp(prefix='cloudify-monitoring-')
     return workdir
@@ -466,8 +466,8 @@ def _set_diamond_service(ctx, config_file):
     new_content = old_content.replace(
         '{{ CMD }}',
         '{0} --configfile {1}'.format(diamond_path, config_file))
-    new_content = new_content.replace('{{ WORK_DIR }}',
-                                      os.environ.get('CELERY_WORK_DIR', ''))
+    workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY, '')
+    new_content = new_content.replace('{{ WORK_DIR }}', workdir)
     new_content = new_content.replace(
         '{{ CLUSTER_SETTINGS_PATH }}',
         os.environ.get(CLUSTER_SETTINGS_PATH_KEY, ''),
