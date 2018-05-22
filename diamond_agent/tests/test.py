@@ -32,7 +32,7 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_get_paths_with_env_plugin_workdir(self):
         prefix = '/my/mock/prefix'
-        with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': prefix}):
+        with mock.patch.dict(os.environ, {'AGENT_WORK_DIR': prefix}):
             ctx = mock.MagicMock()
             ctx.plugin = mock.MagicMock()
             ctx.plugin.workdir = prefix
@@ -44,7 +44,7 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_get_paths_with_env_fallback_workdir(self):
         prefix = '/my/mock/prefix'
-        with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': prefix}):
+        with mock.patch.dict(os.environ, {'AGENT_WORK_DIR': prefix}):
             state.current_ctx.set(object())
             try:
                 self._test(expected_prefix=os.path.join(prefix, 'diamond'))
@@ -53,7 +53,7 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_get_paths_without_env(self):
         prefix = os.path.join(tempfile.gettempdir(), 'cloudify-monitoring-')
-        with mock.patch.dict(os.environ, {'CELERY_WORK_DIR': ''}):
+        with mock.patch.dict(os.environ, {'AGENT_WORK_DIR': ''}):
             self._test(expected_prefix=prefix)
 
     @mock.patch('diamond_agent.tasks.create_paths', return_value=None)
