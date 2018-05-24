@@ -36,7 +36,7 @@ from cloudify_handler.format import jsonify
 class CloudifyHandler(rmqHandler):
 
     sleeper = 1
-    sleeper_max = 30
+    sleeper_max = 60
 
     def _get_sleeper(self):
         self.sleeper = min(self.sleeper * 2, self.sleeper_max)
