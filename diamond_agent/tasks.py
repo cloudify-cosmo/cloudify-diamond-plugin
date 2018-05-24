@@ -23,7 +23,7 @@ from shutil import copytree, copy, rmtree
 from tempfile import mkdtemp
 from subprocess import call
 
-from psutil import pid_exists, Process
+from psutil import pid_exists, Process, Error
 from configobj import ConfigObj
 
 from cloudify import ctx
@@ -153,12 +153,16 @@ def stop_diamond(conf_path):
     config_file = os.path.join(conf_path, CONFIG_NAME)
     pid = get_pid(config_file)
     if pid:
-        diamond_process = Process(pid)
-        diamond_process.terminate()
-        diamond_process.wait(timeout=DEFAULT_TIMEOUT)
-
-        if diamond_process.is_running():
-            raise exceptions.NonRecoverableError("Diamond couldn't be killed")
+        need_kill = True
+        try:
+            diamond_process = Process(pid)
+            diamond_process.terminate()
+            diamond_process.wait(timeout=DEFAULT_TIMEOUT)
+            need_kill = diamond_process.is_running()
+        except Error:
+            pass
+        if need_kill:
+            call(["sudo", "kill", str(pid)])
     else:
         raise exceptions.NonRecoverableError('Failed reading diamond pid file')
 
@@ -356,7 +360,7 @@ def create_config(path_prefix,
             'class': 'handlers.TimedRotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'default',
-            'args': "('{0}', 'midnight', 1, 7)".format(
+            'args': "('{0}', 'midnight', 1, 2)".format(
                 os.path.join(paths['log'], 'diamond.log')),
         },
         'formatter_default': {
@@ -472,6 +476,11 @@ def _set_diamond_service(ctx, config_file):
         '{{ CLUSTER_SETTINGS_PATH }}',
         os.environ.get(CLUSTER_SETTINGS_PATH_KEY, ''),
     )
+    new_content = \
+        new_content.replace(
+            '{{ AGENT_USER }}',
+            ctx.instance.runtime_properties['cloudify_agent']['user'])
+
     with open(source, 'w') as t:
         t.write(new_content)
 

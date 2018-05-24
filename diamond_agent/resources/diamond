@@ -26,7 +26,7 @@ case "$1" in
     start)
     export AGENT_WORK_DIR="{{ WORK_DIR }}"
     export CLOUDIFY_CLUSTER_SETTINGS_PATH="{{ CLUSTER_SETTINGS_PATH }}"
-    {{ CMD }}
+    sudo -u {{ AGENT_USER }} {{ CMD }}
     ;;
     stop)
     if is_running; then
