@@ -94,5 +94,5 @@ class CloudifyHandler(rmqHandler):
         except Exception:  # Rough connection re-try logic.
             self.log.info(
                 "Failed publishing to rabbitMQ. Attempting reconnect")
-            self._bind()
             sleep(self._get_sleeper())
+            self._bind()
