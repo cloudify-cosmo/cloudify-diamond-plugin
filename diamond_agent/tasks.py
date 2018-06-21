@@ -384,7 +384,10 @@ def copy_content(src, dest):
     for item in os.listdir(src):
         full_path = os.path.join(src, item)
         if os.path.isdir(full_path):
-            copytree(full_path, os.path.join(dest, item))
+            full_dest = os.path.join(dest, item)
+            if os.path.exists(full_dest):
+                rmtree(full_dest)
+            copytree(full_path, full_dest)
         else:
             copy(full_path, dest)
 
