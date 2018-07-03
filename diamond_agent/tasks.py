@@ -163,6 +163,12 @@ def stop_diamond(conf_path):
             pass
         if need_kill:
             call(["sudo", "kill", str(pid)])
+            # diamond deletes the pid file, even if killed
+            for _ in range(DEFAULT_TIMEOUT):
+                pid = get_pid(config_file)
+                if not pid:
+                    return
+                sleep(1)
     else:
         raise exceptions.NonRecoverableError('Failed reading diamond pid file')
 
