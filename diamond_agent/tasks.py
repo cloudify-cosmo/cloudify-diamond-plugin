@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import os
 import sys
 import platform
@@ -233,22 +234,20 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     if handlers is None:
         handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
 
-        # If we do not have a real manager cloudify_agent is expected to be an
-        # empty dict. This will be handled by get_broker_credentials.
-        cloudify_agent = ctx.bootstrap_context.cloudify_agent
+        agent_workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY)
+        conf_file_path = os.path.join(agent_workdir, 'broker_config.json')
+        if os.path.isfile(conf_file_path):
+            with open(conf_file_path) as conf_handle:
+                agent_config = json.load(conf_handle)
 
-        broker_user, broker_pass, _ = utils.internal.get_broker_credentials(
-            cloudify_agent
-        )
+            config_changes = {
+                'server': agent_config['broker_hostname'],
+                'user': agent_config['broker_username'],
+                'password': agent_config['broker_password'],
+            }
 
-        config_changes = {
-            'server': cloudify_agent.broker_ip,
-            'user': broker_user,
-            'password': broker_pass,
-        }
-
-        handlers['cloudify_handler.cloudify.CloudifyHandler'][
-            'config'].update(config_changes)
+            handlers['cloudify_handler.cloudify.CloudifyHandler'][
+                'config'].update(config_changes)
 
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
