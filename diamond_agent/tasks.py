@@ -244,6 +244,8 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
                 'server': agent_config['broker_hostname'],
                 'user': agent_config['broker_username'],
                 'password': agent_config['broker_password'],
+                'broker_cert_path': agent_config['broker_cert_path'],
+                'broker_ssl_enabled': agent_config['broker_ssl_enabled'],
             }
 
             handlers['cloudify_handler.cloudify.CloudifyHandler'][
