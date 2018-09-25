@@ -52,17 +52,17 @@ class CloudifyHandler(rmqHandler):
         """
         credentials = pika.PlainCredentials(self.user, self.password)
 
-        ssl_enabled = broker_config.broker_ssl_enabled
+        ssl_enabled = self.config.get('broker_ssl_enabled', 'True') == 'True'
 
         ssl_options = utils.internal.get_broker_ssl_options(
             ssl_enabled=ssl_enabled,
-            cert_path=broker_config.broker_cert_path,
+            cert_path=self.config.get('broker_cert_path', '')
         )
         # Get the cluster host if applicable
         cluster_settings = cluster.get_cluster_amqp_settings()
         broker_host = cluster_settings.get(
             'amqp_host',
-            broker_config.broker_hostname
+            self.server
         )
 
         params = pika.ConnectionParameters(credentials=credentials,
