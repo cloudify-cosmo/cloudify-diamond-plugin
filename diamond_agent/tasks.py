@@ -30,7 +30,7 @@ from configobj import ConfigObj
 from cloudify import ctx
 from cloudify.constants import CLUSTER_SETTINGS_PATH_KEY
 from cloudify.decorators import operation
-from cloudify import exceptions, utils, constants
+from cloudify import exceptions, constants
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
@@ -193,6 +193,13 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
         if 'path' in prop.keys():
             collector_dir = os.path.join(collectors_path, name)
+            if os.path.exists(collector_dir):
+                ctx.logger.warn(
+                    'Collector path {path} already existed, removing.'.format(
+                        path=collector_dir,
+                    )
+                )
+                rmtree(collector_dir)
             os.mkdir(collector_dir)
             collector_file = os.path.join(collector_dir, '{0}.py'.format(name))
             ctx.download_resource(prop['path'], collector_file)
