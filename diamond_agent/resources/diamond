@@ -10,7 +10,9 @@
 ### END INIT INFO
 
 name=`basename $0`
-pid_file="/var/run/$name.pid"
+export AGENT_WORK_DIR="{{ WORK_DIR }}"
+export CLOUDIFY_CLUSTER_SETTINGS_PATH="{{ CLUSTER_SETTINGS_PATH }}"
+pid_file="${AGENT_WORK_DIR}/plugins/diamond/var/run/diamond.pid"
 stdout_log="/var/log/$name.log"
 stderr_log="/var/log/$name.err"
 
@@ -24,14 +26,12 @@ is_running() {
 
 case "$1" in
     start)
-    export AGENT_WORK_DIR="{{ WORK_DIR }}"
-    export CLOUDIFY_CLUSTER_SETTINGS_PATH="{{ CLUSTER_SETTINGS_PATH }}"
-    sudo -u {{ AGENT_USER }} {{ CMD }}
+    sudo -E -u {{ AGENT_USER }} {{ CMD }}
     ;;
     stop)
     if is_running; then
         echo -n "Stopping $name.."
-        kill `get_pid`
+        kill -9 `get_pid`
         for i in {1..10}
         do
             if ! is_running; then
