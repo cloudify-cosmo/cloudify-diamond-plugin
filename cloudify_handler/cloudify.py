@@ -20,8 +20,6 @@ from __future__ import absolute_import
 from time import sleep
 
 from cloudify import (
-    broker_config,
-    cluster,
     utils,
 )
 from diamond.handler.rabbitmq_topic import rmqHandler
@@ -59,11 +57,7 @@ class CloudifyHandler(rmqHandler):
             cert_path=self.config.get('broker_cert_path', '')
         )
         # Get the cluster host if applicable
-        cluster_settings = cluster.get_cluster_amqp_settings()
-        broker_host = cluster_settings.get(
-            'amqp_host',
-            self.server
-        )
+        broker_host = self.server
 
         params = pika.ConnectionParameters(credentials=credentials,
                                            host=broker_host,
