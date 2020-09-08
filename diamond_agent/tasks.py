@@ -55,6 +55,11 @@ _PATHS_TO_CLEAN_UP = ['collectors',
                       'handlers_config',
                       'collectors_config']
 
+try:
+    AGENT_WORK_DIR_KEY = constants.AGENT_WORK_DIR_KEY
+except AttributeError:
+    AGENT_WORK_DIR_KEY = 'AGENT_WORK_DIR'
+
 
 @operation
 def install(ctx, diamond_config, **_):
@@ -220,8 +225,12 @@ def disable_collectors(ctx, collectors, config_path, collectors_path):
         config_full_path = os.path.join(config_path, '{0}.conf'.format(name))
         if 'path' in prop:
             collector_dir = os.path.join(collectors_path, name)
-            rmtree(collector_dir)
-            os.remove(config_full_path)
+            try:
+                rmtree(collector_dir)
+            except OSError:
+                pass
+            else:
+                os.remove(config_full_path)
         else:
             original_collector = os.path.join(_prefix(), 'etc', 'diamond',
                                               'collectors',
@@ -241,7 +250,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     if handlers is None:
         handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
 
-        agent_workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY)
+        agent_workdir = _calc_workdir()
         conf_file_path = os.path.join(agent_workdir, 'broker_config.json')
         if os.path.isfile(conf_file_path):
             with open(conf_file_path) as conf_handle:
@@ -257,7 +266,6 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
 
             handlers['cloudify_handler.cloudify.CloudifyHandler'][
                 'config'].update(config_changes)
-
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
@@ -444,14 +452,14 @@ def _prefix():
             # This happens if diamond plugin is installed in the agent package.
             # In this case, the plugin.prefix dir will exist but will be empty.
             return sys.prefix
-    except AttributeError:
+    except (TypeError, AttributeError):
         # Support older versions of cloudify-plugins-common
         return sys.prefix
 
 
 def _calc_workdir():
     # Used to check if we are inside an agent environment
-    agent_workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY)
+    agent_workdir = os.environ.get(AGENT_WORK_DIR_KEY)
     if agent_workdir:
         try:
             workdir = ctx.plugin.workdir
@@ -464,7 +472,22 @@ def _calc_workdir():
 
 
 def _get_agent_name(ctx):
-    return ctx.instance.runtime_properties['cloudify_agent']['name']
+    agent = _get_agent(ctx)
+    return agent.get('name', get_host_id(ctx))
+
+
+def _get_agent_user(ctx):
+    agent = _get_agent(ctx)
+    return agent.get('user')
+
+
+def _get_agent(ctx):
+    return ctx.instance.runtime_properties.get(
+        'cloudify_agent',
+        ctx.instance.runtime_properties.get(
+            'agent_config',
+            ctx.node.properties.get(
+                'agent_config', {})))
 
 
 def _get_service_name(ctx):
@@ -487,7 +510,7 @@ def _set_diamond_service(ctx, config_file):
     new_content = old_content.replace(
         '{{ CMD }}',
         '{0} --configfile {1}'.format(diamond_path, config_file))
-    workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY, '')
+    workdir = os.environ.get(AGENT_WORK_DIR_KEY, '')
     new_content = new_content.replace('{{ WORK_DIR }}', workdir)
     new_content = new_content.replace(
         '{{ CLUSTER_SETTINGS_PATH }}',
@@ -496,7 +519,7 @@ def _set_diamond_service(ctx, config_file):
     new_content = \
         new_content.replace(
             '{{ AGENT_USER }}',
-            ctx.instance.runtime_properties['cloudify_agent']['user'])
+            _get_agent_user(ctx))
 
     with open(source, 'w') as t:
         t.write(new_content)

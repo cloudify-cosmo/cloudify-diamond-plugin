@@ -1,0 +1,14 @@
+try adding it to the blueprint
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# Date:      Tue Sep 8 13:03:28 2020 +0300
+#
+# On branch CY-3400-Python-3
+# Changes to be committed:
+#	modified:   CHANGELOG.txt
+#	modified:   diamond_agent/tests/resources/blueprint/multi_node.yaml
+#	modified:   diamond_agent/tests/resources/blueprint/restart_diamond_script.yaml
+#	modified:   diamond_agent/tests/resources/blueprint/single_node.yaml
+#

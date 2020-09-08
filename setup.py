@@ -48,7 +48,7 @@ setup(
     license='LICENSE',
     install_requires=['cloudify-common>=4.5.5',
                       'cloudify-utilities-plugins-sdk>=0.0.25',  # _compat
-                      'diamond==3.5.0',
+                      'diamond>=4.0.515',
                       'ConfigObj==5.0.6',
                       'psutil==2.1.1']
 )
