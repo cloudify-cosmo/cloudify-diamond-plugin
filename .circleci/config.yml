@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 checkout:
   post:
@@ -9,67 +9,496 @@ checkout:
         git checkout -qf FETCH_HEAD
       fi
 
-defaults:
-  - &test_defaults
-    docker:
-      - image: circleci/python:2.7
-    steps:
-      - checkout
-      - run:
-          name: Install tox, NOTICE we use an old version of tox because of CFY-6398 ( relying dict ordering)
-          command: sudo pip install tox==1.6.1
-      - run:
-          name: Run tox of specfic environment
-          command: tox -e $DO_ENV
 
-  - &test_defaults_for_python26
+executors:
+
+  py27:
     docker:
       - image: circleci/python:2.7
+
+  py36:
+    docker:
+      - image: circleci/python:3.6
+
+  wagon_generator:
+    machine:
+      image: ubuntu-1604:201903-01
+
+  cloudify-machine:
+    machine:
+      image: ubuntu-1604:201903-01
+
+  cloudify-machine-510:
+    machine:
+      image: ubuntu-1604:201903-01
+
+commands:
+  run_unittest:
     steps:
-      - checkout
       - run:
-          name: Install and set python version with pyenv
+          name: "Pull Submodules"
           command: |
-                   git clone https://github.com/yyuu/pyenv.git ~/.pyenv
-                   export PYENV_ROOT="$HOME/.pyenv"
-                   export PATH="$PYENV_ROOT/bin:$PATH"
-                   sudo apt-get install -y build-essential libssl1.0-dev zlib1g-dev xz-utils
-                   pyenv install 2.6.9
-                   pyenv local 2.6.9
+            git submodule init
+            git submodule update --remote --recursive
       - run:
-          name: Install tox, NOTICE we use an old version of tox because of CFY-6398 (relying dict ordering)
-          command: sudo pip install tox==1.6.1 tox-pyenv
+          name: install tox
+          command: pip install --user tox
       - run:
-          name: Run tox of specfic environment
-          command: tox -e $DO_ENV
+          name: Run Flake8
+          command: /home/circleci/.local/bin/tox -e flake8
+      - run:
+         name: Run nosetest
+         command: /home/circleci/.local/bin/tox -e py27
+
+  check_py3_compat:
+    steps:
+      - run:
+          name: install futurize
+          command: pip install future --user
+      - run:
+          name: remove python3 incompatible modules
+          command: |
+            rm cloudify_ansible_sdk/_compat.py
+      - run:
+          name: find python3-incompatible code
+          command: |
+            FUTURIZE="futurize ."
+            while read line; do
+              [[ "$line" =~ ^#.* ]] && continue
+              FUTURIZE="${FUTURIZE} ${line}"
+            done<.circleci/py3fixers
+            echo "Running: $FUTURIZE"
+            $FUTURIZE>futurize_diffs
+      - run:
+          name: check that there is no python3-incompatible code
+          command: |
+            if [[ -s futurize_diffs ]]; then
+              echo "Python-3-incompatible code found"
+              cat futurize_diffs
+              exit 1
+            fi
+
+
+  validate_documentation:
+    steps:
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule init
+            git submodule update --remote --recursive
+      - run:
+          name: Download pip
+          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+      - run:
+          name: Install pip
+          command: sudo python get-pip.py
+      - run:
+          name: Install virtualenv
+          command: pip install --user virtualenv
+      - run:
+          name: Init virtualenv
+          command: virtualenv env
+      - run:
+          name: install tox
+          command: pip install --user pygithub pyyaml==3.10
+      - run:
+          name: upgrade setuptools
+          command: pip install --upgrade setuptools
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - attach_workspace:
+          at: workspace
+      - run: python .circleci/validate_docs.py
+
+  validate_version:
+    steps:
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule init
+            git submodule update --remote --recursive
+      - run:
+          name: Download pip
+          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+      - run:
+          name: Install pip
+          command: sudo python get-pip.py
+      - run:
+          name: Install virtualenv
+          command: pip install --user virtualenv
+      - run:
+          name: Init virtualenv
+          command: virtualenv env
+      - run:
+          name: install tox
+          command: pip install --user pygithub pyyaml==3.10
+      - run:
+          name: upgrade setuptools
+          command: pip install --upgrade setuptools
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - attach_workspace:
+          at: workspace
+      - run: python .circleci/validate_version.py
+
+  generate_py27py36_wagon:
+    steps:
+      - run:
+          name: Create Workspace Build directory.
+          command: mkdir -p workspace/build
+      - run:
+          name: Build py27py36 Wagon
+          command: |
+              git clone https://github.com/cloudify-cosmo/cloudify-wagon-build-containers.git
+              docker build -t cloudify-centos-7-wagon-builder cloudify-wagon-build-containers/centos_7_py2py3
+              docker run -v ~/project/:/packaging cloudify-centos-7-wagon-builder
+      - run:
+          name: copy wagon to workspace
+          command: cp *.wgn workspace/build/
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - build/*
+
+  generate_rhel_py27py36_wagon:
+    steps:
+      - run:
+          name: Create Workspace Build directory.
+          command: mkdir -p workspace/build
+      - run:
+          name: Build RHEL py27py36 Wagon
+          command: |
+              git clone https://github.com/cloudify-cosmo/cloudify-wagon-build-containers.git
+              docker build -t cloudify-redhat-7-wagon-builder cloudify-wagon-build-containers/redhat_7_py2py3 --build-arg USERNAME="$USERNAME" --build-arg PASSWORD="$PASSWORD"
+              docker run -v ~/project/:/packaging cloudify-redhat-7-wagon-builder
+      - run:
+          name: copy wagon to workspace
+          command: cp *.wgn workspace/build/
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - build/*
+
+  build_archive:
+    steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Create Workspace Build directory.
+          command: mkdir -p workspace/build
+      - run:
+          name: Build Bundle
+          command: |
+              git clone https://github.com/cloudify-incubator/cloudify-ecosystem-test.git
+              pip install -e cloudify-ecosystem-test
+              python -c 'from ecosystem_cicd_tools import packaging; packaging.build_plugins_bundle_with_workspace()'
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - build/*
+
+  run_integration_tests_505:
+    steps:
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule update --init --recursive
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: update pip
+          command: pip install -U pip
+      - run:
+          name: install cloudify
+          command: |
+            pip install -r test-requirements.txt
+      - run:
+          name: download manager docker image
+          command: wget http://repository.cloudifysource.org/cloudify/5.0.5/ga-release/cloudify-docker-manager-5.0.5.tar
+      - run:
+          name: load docker image
+          command: docker load -i cloudify-docker-manager-5.0.5.tar
+      - run:
+          name: retain space by dumping the tar
+          command: rm cloudify-docker-manager-5.0.5.tar
+      - run:
+          name: show images
+          command: docker images
+      - run:
+          name: start docker container
+          command: docker run --name cfy_manager -d --restart unless-stopped -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN --network host cloudifyplatform/premium-cloudify-manager-aio
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - run: pytest -s .circleci/test_examples.py
+
+  run_integration_tests_510:
+    steps:
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule update --init --recursive --remote
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: update pip
+          command: pip install -U pip
+      - run:
+          name: install cloudify
+          command: |
+            pip install -r test-requirements.txt
+      - run:
+          name: download manager docker image
+          command:  wget http://repository.cloudifysource.org/cloudify/5.1.0/.dev1-release/cloudify-manager-aio-docker-5.1.0.dev1.tar
+      - run:
+          name: load docker image
+          command: docker load -i cloudify-manager-aio-docker-5.1.0.dev1.tar
+      - run:
+          name: retain space by dumping the tar
+          command: rm cloudify-manager-aio-docker-5.1.0.dev1.tar
+      - run:
+          name: show images
+          command: docker images
+      - run:
+          name: start docker container
+          command: docker run --name cfy_manager -d --restart unless-stopped -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN --network host cloudify-manager-aio:latest
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - run: pytest -s .circleci/test_examples.py
+
+  release_plugin:
+    steps:
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule init
+            git submodule update --remote --recursive
+      - run:
+          name: Download pip
+          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+      - run:
+          name: Install pip
+          command: sudo python get-pip.py
+      - run:
+          name: Install virtualenv
+          command: pip install --user virtualenv
+      - run:
+          name: Init virtualenv
+          command: virtualenv env
+      - run:
+          name: install tox
+          command: pip install --user pygithub pyyaml==3.10
+      - run:
+          name: upgrade setuptools
+          command: pip install --upgrade setuptools
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - attach_workspace:
+          at: workspace
+      - run: python .circleci/package_release.py
+
+
+  merge_docs:
+    steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule init
+            git submodule update --remote --recursive
+      - run:
+          name: Download pip
+          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+      - run:
+          name: Install pip
+          command: sudo python get-pip.py
+      - run:
+          name: Install virtualenv
+          command: pip install --user virtualenv
+      - run:
+          name: Init virtualenv
+          command: virtualenv env
+      - run:
+          name: install tox
+          command: pip install --user pygithub pyyaml==3.10
+      - run:
+          name: upgrade setuptools
+          command: pip install --upgrade setuptools
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - attach_workspace:
+          at: workspace
+      - run: python .circleci/merge_docs.py
 
 jobs:
-  flake8:
-    <<: *test_defaults
-    environment:
-      DO_ENV: flake8
 
-  test_py27:
-    <<: *test_defaults
-    environment:
-      DO_ENV: test_py27
+  unittests_py27:
+    executor: py27
+    steps:
+      - checkout
+      - run_unittest
 
-  test_py26:
-    <<: *test_defaults_for_python26
-    environment:
-      DO_ENV: test_py26
+  unittests_py36:
+    executor: py36
+    steps:
+      - checkout
+      - run_unittest
 
-  docs:
-    <<: *test_defaults_for_python26
+  py3_compat:
+    executor: py27
+    steps:
+      - checkout
+      - check_py3_compat
+
+  validate_version:
+    executor: py27
+    steps:
+      - checkout
+      - validate_version
+
+  validate_documentation:
+    executor: py27
+    steps:
+      - checkout
+      - validate_documentation
+
+  wagon:
+    executor: wagon_generator
+    steps:
+      - checkout
+      - generate_py27py36_wagon
+
+  rhel_wagon:
+    executor: wagon_generator
+    steps:
+      - checkout
+      - generate_rhel_py27py36_wagon
+
+  build_bundle:
+    executor: wagon_generator
+    steps:
+      - checkout
+      - build_archive
+
+  integration_tests_505:
+    executor: cloudify-machine
     environment:
-      DO_ENV: docs
+      CLOUDIFY_SSL_TRUST_ALL: true
+      IAAS: gcp
+    steps:
+      - checkout
+      - run_integration_tests_505
+
+  integration_tests_510:
+    executor: cloudify-machine-510
+    environment:
+      CLOUDIFY_SSL_TRUST_ALL: true
+      IAAS: gcp
+    steps:
+      - checkout
+      - run_integration_tests_510
+  release:
+    executor: py27
+    steps:
+      - checkout
+      - release_plugin
+
+  merge_docs:
+    executor: py27
+    steps:
+      - checkout
+      - merge_docs
 
 workflows:
   version: 2
-
-  build_and_test:
+  tests:
     jobs:
-      - flake8
-      - test_py27
-      - test_py26
-      - docs
+      - py3_compat
+      - unittests_py27
+      - unittests_py36
+      - validate_version
+      - validate_documentation
+      - wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - rhel_wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - build_bundle:
+          filters:
+            branches:
+              only: /master/
+          requires:
+            - wagon
+            - rhel_wagon
+      - integration_tests_505:
+          requires:
+            - build_bundle
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - integration_tests_510:
+          requires:
+            - build_bundle
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - release:
+          filters:
+            branches:
+              only: /master/
+          requires:
+            - validate_version
+            - validate_documentation
+            - integration_tests_505
+            - integration_tests_510
+      - merge_docs:
+          filters:
+            branches:
+              only: /master/
+          requires:
+            - release
+            - validate_documentation
+  nightly:
+    triggers:
+    - schedule:
+        cron: "0 1 * * *"
+        filters:
+          branches:
+            only:
+              - master
+    jobs:
+      - py3_compat
+      - validate_version
+      - unittests_py27
+      - unittests_py36
+      - wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master)/
+      - rhel_wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master)/
+      - integration_tests_505:
+          requires:
+            - wagon
+            - rhel_wagon
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master)/
+      - integration_tests_510:
+          requires:
+            - wagon
+            - rhel_wagon
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master)/

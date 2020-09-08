@@ -1,0 +1,13 @@
+ > FUTURIZE="futurize ."
+while read line; do
+  [[ "$line" =~ ^#.* ]] && continue
+  FUTURIZE="${FUTURIZE} ${line}"
+done<py3fixers
+echo "Running: $FUTURIZE"
+$FUTURIZE>futurize_diffs
+
+ > if [[ -s futurize_diffs ]]; then
+  echo "Python-3-incompatible code found"
+  cat futurize_diffs
+  exit 1
+fi
