@@ -34,6 +34,7 @@ def get_version(rel_file='plugin.yaml'):
             return line_no_quotes.strip('\n')
     raise RuntimeError('Unable to find version string.')
 
+
 setup(
     name='cloudify-diamond-plugin',
     version=get_version(),

@@ -29,7 +29,7 @@ class TestSingleNode(TestCase):
     def tearDown(self):
         super(TestSingleNode, self).tearDown()
         if self.env and self.is_uninstallable:
-                self.env.execute('uninstall', task_retries=0)
+            self.env.execute('uninstall', task_retries=0)
 
     # custom handler + custom collector
     def test_custom_collectors(self):
