@@ -1,17 +1,15 @@
 import os
 import time
-import cPickle
-import testtools
 import tempfile
+import pickle as cPickle
 
 import mock
-
+import testtools
 from configobj import ConfigObj
 
 from cloudify.workflows import local
 
 from diamond_agent import tasks
-
 from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
 
 

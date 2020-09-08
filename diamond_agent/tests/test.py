@@ -60,5 +60,5 @@ class TestHelperFunctions(unittest.TestCase):
     def _test(self, _, expected_prefix, get_paths_arg=None):
         paths = tasks.get_paths(get_paths_arg)
         self.assertTrue(len(paths) > 0)
-        for path in paths.values():
+        for _, path in paths.items():
             self.assertTrue(path.startswith(expected_prefix))

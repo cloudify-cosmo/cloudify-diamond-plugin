@@ -1,17 +1,17 @@
 import os
 import time
 import json
-import cPickle
 import tempfile
-from testtools import TestCase, ExpectedException
+import pickle as cPickle
 
 import mock
 import psutil
+from testtools import TestCase, ExpectedException
 
-from diamond_agent import tasks
 from cloudify.workflows import local
 from cloudify.decorators import operation
 
+from diamond_agent import tasks
 from diamond_agent.tasks import restart_diamond
 from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
 

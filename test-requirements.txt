@@ -1,4 +1,5 @@
 mock
+flake8
 pytest
 testtools
 pytest-cov

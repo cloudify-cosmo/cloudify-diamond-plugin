@@ -17,20 +17,20 @@ import json
 import os
 import sys
 import platform
-import copy as copy_objects
 from glob import glob
 from time import sleep
-from shutil import copytree, copy, rmtree
-from tempfile import mkdtemp
+import copy as copy_objects
 from subprocess import call
+from tempfile import mkdtemp
+from shutil import copytree, copy, rmtree
 
-from psutil import pid_exists, Process, Error
 from configobj import ConfigObj
+from psutil import pid_exists, Process, Error
 
 from cloudify import ctx
-from cloudify.constants import CLUSTER_SETTINGS_PATH_KEY
 from cloudify.decorators import operation
 from cloudify import exceptions, constants
+from cloudify.constants import CLUSTER_SETTINGS_PATH_KEY
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
@@ -57,7 +57,7 @@ _PATHS_TO_CLEAN_UP = ['collectors',
 
 
 @operation
-def install(ctx, diamond_config, **kwargs):
+def install(ctx, diamond_config, **_):
     paths = get_paths(diamond_config.get('prefix'))
     ctx.instance.runtime_properties['diamond_paths'] = paths
 
@@ -82,7 +82,7 @@ def install(ctx, diamond_config, **kwargs):
 
 
 @operation
-def uninstall(ctx, **kwargs):
+def uninstall(ctx, **_):
     _unset_diamond_service(ctx)
     paths = ctx.instance.runtime_properties['diamond_paths']
     for path_name in _PATHS_TO_CLEAN_UP:
@@ -91,7 +91,7 @@ def uninstall(ctx, **kwargs):
 
 
 @operation
-def start(ctx, **kwargs):
+def start(ctx, **_):
     paths = ctx.instance.runtime_properties['diamond_paths']
     try:
         start_diamond(paths['config'])
@@ -101,7 +101,7 @@ def start(ctx, **kwargs):
 
 
 @operation
-def stop(ctx, **kwargs):
+def stop(ctx, **_):
     conf_path = ctx.instance.runtime_properties['diamond_paths']['config']
     # letting the workflow engine handle this in case of errors
     # so no try/catch
@@ -109,7 +109,7 @@ def stop(ctx, **kwargs):
 
 
 @operation
-def add_collectors(ctx, collectors_config, **kwargs):
+def add_collectors(ctx, collectors_config, **_):
     _ctx = get_host_ctx(ctx)
     paths = _ctx.runtime_properties['diamond_paths']
 
@@ -122,7 +122,7 @@ def add_collectors(ctx, collectors_config, **kwargs):
 
 
 @operation
-def del_collectors(ctx, collectors_config, **kwargs):
+def del_collectors(ctx, collectors_config, **_):
     _ctx = get_host_ctx(ctx)
     paths = _ctx.runtime_properties['diamond_paths']
 
@@ -165,7 +165,7 @@ def stop_diamond(conf_path):
         if need_kill:
             call(["sudo", "kill", str(pid)])
             # diamond deletes the pid file, even if killed
-            for _ in range(DEFAULT_TIMEOUT):
+            for __ in range(DEFAULT_TIMEOUT):
                 pid = get_pid(config_file)
                 if not pid:
                     return
@@ -191,7 +191,7 @@ def get_pid(config_file):
 
 def enable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
-        if 'path' in prop.keys():
+        if 'path' in prop:
             collector_dir = os.path.join(collectors_path, name)
             if os.path.exists(collector_dir):
                 ctx.logger.warn(
@@ -218,7 +218,7 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
 def disable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
         config_full_path = os.path.join(config_path, '{0}.conf'.format(name))
-        if 'path' in prop.keys():
+        if 'path' in prop:
             collector_dir = os.path.join(collectors_path, name)
             rmtree(collector_dir)
             os.remove(config_full_path)
@@ -262,7 +262,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
     for name, prop in handlers.items():
-        if 'path' in prop.keys():
+        if 'path' in prop:
             handler_file = os.path.join(handlers_path,
                                         '{0}.py'.format(name.split('.')[-2]))
             ctx.download_resource(prop['path'], handler_file)
@@ -271,7 +271,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
             name.split('.')[-1]))
         write_config(path, prop.get('config', {}))
 
-    return handlers.keys()
+    return list(handlers.keys())
 
 
 def write_config(path, properties):
@@ -324,7 +324,7 @@ def get_paths(prefix):
 
 
 def create_paths(paths):
-    for path in paths.values():
+    for _, path in paths.items():
         if not os.path.exists(path):
             os.makedirs(path)
 
