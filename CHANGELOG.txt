@@ -1,1 +1,1 @@
-1.3.18: Python 3 Support.
+1.3.18: Deprecation.

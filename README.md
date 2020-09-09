@@ -6,5 +6,7 @@
 
 Cloudify [Diamond](https://github.com/BrightcoveOS/Diamond) monitoring plugin.
 
+**As of Cloudify 5.1, the plugin is deprecated.**
+
 See [Diamond Plugin](http://docs.getcloudify.org/latest/plugins/diamond)
 

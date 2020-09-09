@@ -55,87 +55,49 @@ _PATHS_TO_CLEAN_UP = ['collectors',
                       'handlers_config',
                       'collectors_config']
 
-try:
-    AGENT_WORK_DIR_KEY = constants.AGENT_WORK_DIR_KEY
-except AttributeError:
-    AGENT_WORK_DIR_KEY = 'AGENT_WORK_DIR'
+AGENT_WORK_DIR_KEY = 'AGENT_WORK_DIR'
 
 
 @operation
-def install(ctx, diamond_config, **_):
-    paths = get_paths(diamond_config.get('prefix'))
-    ctx.instance.runtime_properties['diamond_paths'] = paths
-
-    handlers = config_handlers(ctx,
-                               diamond_config.get('handlers'),
-                               paths['handlers_config'],
-                               paths['handlers'])
-
-    interval = diamond_config.get('interval', DEFAULT_INTERVAL)
-    create_config(path_prefix=ctx.deployment.id,
-                  handlers=handlers,
-                  interval=interval,
-                  paths=paths)
-
-    copy_content(os.path.join(_prefix(), 'share', 'diamond', 'collectors'),
-                 paths['collectors'])
-    copy_content(os.path.join(_prefix(), 'etc', 'diamond', 'collectors'),
-                 paths['collectors_config'])
-
-    disable_all_collectors(paths['collectors_config'])
-    _set_diamond_service(ctx, os.path.join(paths['config'], CONFIG_NAME))
+def install(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def uninstall(ctx, **_):
-    _unset_diamond_service(ctx)
-    paths = ctx.instance.runtime_properties['diamond_paths']
-    for path_name in _PATHS_TO_CLEAN_UP:
-        delete_path(ctx, paths[path_name])
-    delete_path(ctx, os.path.join(paths['config'], CONFIG_NAME))
+def uninstall(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def start(ctx, **_):
-    paths = ctx.instance.runtime_properties['diamond_paths']
-    try:
-        start_diamond(paths['config'])
-    except OSError as e:
-        raise exceptions.NonRecoverableError(
-            'Starting diamond failed: {0}'.format(e))
+def start(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def stop(ctx, **_):
-    conf_path = ctx.instance.runtime_properties['diamond_paths']['config']
-    # letting the workflow engine handle this in case of errors
-    # so no try/catch
-    stop_diamond(conf_path)
+def stop(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def add_collectors(ctx, collectors_config, **_):
-    _ctx = get_host_ctx(ctx)
-    paths = _ctx.runtime_properties['diamond_paths']
-
-    enable_collectors(ctx,
-                      collectors_config,
-                      paths['collectors_config'],
-                      paths['collectors'])
-
-    restart_diamond(paths['config'])
+def add_collectors(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def del_collectors(ctx, collectors_config, **_):
-    _ctx = get_host_ctx(ctx)
-    paths = _ctx.runtime_properties['diamond_paths']
-
-    disable_collectors(ctx, collectors_config,
-                       paths['collectors_config'],
-                       paths['collectors'])
-
-    restart_diamond(paths['config'])
+def del_collectors(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 def start_diamond(conf_path):
@@ -443,16 +405,21 @@ def delete_path(ctx, path):
 
 
 def _prefix():
+
+    try:
+        prefix = ctx.plugin.prefix
+    except TypeError:
+        prefix = ''
+
     try:
         test_suffix = os.path.join('share', 'diamond', 'collectors')
-        prefix = ctx.plugin.prefix
         if os.path.exists(os.path.join(prefix, test_suffix)):
             return prefix
         else:
             # This happens if diamond plugin is installed in the agent package.
             # In this case, the plugin.prefix dir will exist but will be empty.
             return sys.prefix
-    except (TypeError, AttributeError):
+    except AttributeError:
         # Support older versions of cloudify-plugins-common
         return sys.prefix
 
