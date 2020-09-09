@@ -13,7 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import cPickle
+import pickle as cPickle
+
 from diamond.handler.Handler import Handler
 from cloudify_handler.format import jsonify
 

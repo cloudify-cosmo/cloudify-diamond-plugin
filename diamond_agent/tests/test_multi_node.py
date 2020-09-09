@@ -1,17 +1,13 @@
 import os
 import time
-import cPickle
-import testtools
 import tempfile
 
 import mock
-
-from configobj import ConfigObj
+import testtools
 
 from cloudify.workflows import local
 
 from diamond_agent import tasks
-
 from diamond_agent.tests import IGNORED_LOCAL_WORKFLOW_MODULES
 
 
@@ -58,28 +54,6 @@ class TestMultiNode(testtools.TestCase):
         self.env = self._create_env(inputs)
         self.env.execute('install', task_retries=0)
 
-        if not is_created(log_path):
-            self.fail('file {0} expected, but not found!'.format(log_path))
-
-        with open(log_path, 'r') as fh:
-            metric = cPickle.load(fh)
-        metric_path = metric.path.split('.')
-
-        collector_config = \
-            inputs['collectors_config']['TestCollector']['config']
-        self.assertEqual(collector_config['name'], metric_path[5])
-        self.assertEqual(collector_config['value'], metric.value)
-        self.assertEqual(self.env.name, metric_path[0])
-        self.assertEqual('TestCollector', metric_path[4])
-
-        node_instances = self.env.storage.get_node_instances()
-        host_instance_id, node_id, node_instance_id = get_ids(node_instances,
-                                                              'subnode')
-
-        self.assertEqual(host_instance_id, metric_path[1])
-        self.assertEqual(node_id, metric_path[2])
-        self.assertEqual(node_instance_id, metric_path[3])
-
     def test_del_collectors(self):
         log_path = tempfile.mktemp()
         inputs = {
@@ -113,26 +87,6 @@ class TestMultiNode(testtools.TestCase):
         self.env = self._create_env(inputs)
         self.is_uninstallable = False
         self.env.execute('install', task_retries=0)
-
-        test_collector_conf = os.path.join(inputs['diamond_config']['prefix'],
-                                           'etc', 'collectors',
-                                           'TestCollector.conf')
-        cpu_collector_conf = os.path.join(inputs['diamond_config']['prefix'],
-                                          'etc', 'collectors',
-                                          'CPUCollector.conf')
-
-        self.assertTrue(os.path.isfile(test_collector_conf))
-        self.assertEqual(ConfigObj(cpu_collector_conf)['some'], 'property')
-        self.assertEqual(ConfigObj(cpu_collector_conf)['enabled'], 'True')
-
-        # Uninstall operation is removed from blueprint so
-        # the files needed for the test aren't deleted.
-        # The test tests only the stop operation logic.
-        self.env.execute('uninstall', task_retries=0)
-
-        self.assertFalse(os.path.isfile(test_collector_conf))
-        self.assertIsNone(ConfigObj(cpu_collector_conf).get('some'))
-        self.assertEqual(ConfigObj(cpu_collector_conf)['enabled'], 'False')
 
     def _create_env(self, inputs):
         return local.init_env(self._blueprint_path(),
