@@ -17,20 +17,20 @@ import json
 import os
 import sys
 import platform
-import copy as copy_objects
 from glob import glob
 from time import sleep
-from shutil import copytree, copy, rmtree
-from tempfile import mkdtemp
+import copy as copy_objects
 from subprocess import call
+from tempfile import mkdtemp
+from shutil import copytree, copy, rmtree
 
-from psutil import pid_exists, Process, Error
 from configobj import ConfigObj
+from psutil import pid_exists, Process, Error
 
 from cloudify import ctx
-from cloudify.constants import CLUSTER_SETTINGS_PATH_KEY
 from cloudify.decorators import operation
 from cloudify import exceptions, constants
+from cloudify.constants import CLUSTER_SETTINGS_PATH_KEY
 
 CONFIG_NAME = 'diamond.conf'
 PID_NAME = 'diamond.pid'
@@ -55,82 +55,49 @@ _PATHS_TO_CLEAN_UP = ['collectors',
                       'handlers_config',
                       'collectors_config']
 
-
-@operation
-def install(ctx, diamond_config, **kwargs):
-    paths = get_paths(diamond_config.get('prefix'))
-    ctx.instance.runtime_properties['diamond_paths'] = paths
-
-    handlers = config_handlers(ctx,
-                               diamond_config.get('handlers'),
-                               paths['handlers_config'],
-                               paths['handlers'])
-
-    interval = diamond_config.get('interval', DEFAULT_INTERVAL)
-    create_config(path_prefix=ctx.deployment.id,
-                  handlers=handlers,
-                  interval=interval,
-                  paths=paths)
-
-    copy_content(os.path.join(_prefix(), 'share', 'diamond', 'collectors'),
-                 paths['collectors'])
-    copy_content(os.path.join(_prefix(), 'etc', 'diamond', 'collectors'),
-                 paths['collectors_config'])
-
-    disable_all_collectors(paths['collectors_config'])
-    _set_diamond_service(ctx, os.path.join(paths['config'], CONFIG_NAME))
+AGENT_WORK_DIR_KEY = 'AGENT_WORK_DIR'
 
 
 @operation
-def uninstall(ctx, **kwargs):
-    _unset_diamond_service(ctx)
-    paths = ctx.instance.runtime_properties['diamond_paths']
-    for path_name in _PATHS_TO_CLEAN_UP:
-        delete_path(ctx, paths[path_name])
-    delete_path(ctx, os.path.join(paths['config'], CONFIG_NAME))
+def install(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def start(ctx, **kwargs):
-    paths = ctx.instance.runtime_properties['diamond_paths']
-    try:
-        start_diamond(paths['config'])
-    except OSError as e:
-        raise exceptions.NonRecoverableError(
-            'Starting diamond failed: {0}'.format(e))
+def uninstall(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def stop(ctx, **kwargs):
-    conf_path = ctx.instance.runtime_properties['diamond_paths']['config']
-    # letting the workflow engine handle this in case of errors
-    # so no try/catch
-    stop_diamond(conf_path)
+def start(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def add_collectors(ctx, collectors_config, **kwargs):
-    _ctx = get_host_ctx(ctx)
-    paths = _ctx.runtime_properties['diamond_paths']
-
-    enable_collectors(ctx,
-                      collectors_config,
-                      paths['collectors_config'],
-                      paths['collectors'])
-
-    restart_diamond(paths['config'])
+def stop(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 @operation
-def del_collectors(ctx, collectors_config, **kwargs):
-    _ctx = get_host_ctx(ctx)
-    paths = _ctx.runtime_properties['diamond_paths']
+def add_collectors(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
-    disable_collectors(ctx, collectors_config,
-                       paths['collectors_config'],
-                       paths['collectors'])
 
-    restart_diamond(paths['config'])
+@operation
+def del_collectors(**_):
+    ctx.logger.warn(
+        'Diamond plugin functionality is deprecated in Cloudify 5. '
+        'Doing nothing.')
 
 
 def start_diamond(conf_path):
@@ -165,7 +132,7 @@ def stop_diamond(conf_path):
         if need_kill:
             call(["sudo", "kill", str(pid)])
             # diamond deletes the pid file, even if killed
-            for _ in range(DEFAULT_TIMEOUT):
+            for __ in range(DEFAULT_TIMEOUT):
                 pid = get_pid(config_file)
                 if not pid:
                     return
@@ -191,7 +158,7 @@ def get_pid(config_file):
 
 def enable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
-        if 'path' in prop.keys():
+        if 'path' in prop:
             collector_dir = os.path.join(collectors_path, name)
             if os.path.exists(collector_dir):
                 ctx.logger.warn(
@@ -218,10 +185,14 @@ def enable_collectors(ctx, collectors, config_path, collectors_path):
 def disable_collectors(ctx, collectors, config_path, collectors_path):
     for name, prop in collectors.items():
         config_full_path = os.path.join(config_path, '{0}.conf'.format(name))
-        if 'path' in prop.keys():
+        if 'path' in prop:
             collector_dir = os.path.join(collectors_path, name)
-            rmtree(collector_dir)
-            os.remove(config_full_path)
+            try:
+                rmtree(collector_dir)
+            except OSError:
+                pass
+            else:
+                os.remove(config_full_path)
         else:
             original_collector = os.path.join(_prefix(), 'etc', 'diamond',
                                               'collectors',
@@ -241,7 +212,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
     if handlers is None:
         handlers = copy_objects.deepcopy(DEFAULT_HANDLERS)
 
-        agent_workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY)
+        agent_workdir = _calc_workdir()
         conf_file_path = os.path.join(agent_workdir, 'broker_config.json')
         if os.path.isfile(conf_file_path):
             with open(conf_file_path) as conf_handle:
@@ -257,12 +228,11 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
 
             handlers['cloudify_handler.cloudify.CloudifyHandler'][
                 'config'].update(config_changes)
-
     elif not handlers:
         raise exceptions.NonRecoverableError('Empty handlers dict')
 
     for name, prop in handlers.items():
-        if 'path' in prop.keys():
+        if 'path' in prop:
             handler_file = os.path.join(handlers_path,
                                         '{0}.py'.format(name.split('.')[-2]))
             ctx.download_resource(prop['path'], handler_file)
@@ -271,7 +241,7 @@ def config_handlers(ctx, handlers, config_path, handlers_path):
             name.split('.')[-1]))
         write_config(path, prop.get('config', {}))
 
-    return handlers.keys()
+    return list(handlers.keys())
 
 
 def write_config(path, properties):
@@ -324,7 +294,7 @@ def get_paths(prefix):
 
 
 def create_paths(paths):
-    for path in paths.values():
+    for _, path in paths.items():
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -435,9 +405,14 @@ def delete_path(ctx, path):
 
 
 def _prefix():
+
+    try:
+        prefix = ctx.plugin.prefix
+    except TypeError:
+        prefix = ''
+
     try:
         test_suffix = os.path.join('share', 'diamond', 'collectors')
-        prefix = ctx.plugin.prefix
         if os.path.exists(os.path.join(prefix, test_suffix)):
             return prefix
         else:
@@ -451,7 +426,7 @@ def _prefix():
 
 def _calc_workdir():
     # Used to check if we are inside an agent environment
-    agent_workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY)
+    agent_workdir = os.environ.get(AGENT_WORK_DIR_KEY)
     if agent_workdir:
         try:
             workdir = ctx.plugin.workdir
@@ -464,7 +439,22 @@ def _calc_workdir():
 
 
 def _get_agent_name(ctx):
-    return ctx.instance.runtime_properties['cloudify_agent']['name']
+    agent = _get_agent(ctx)
+    return agent.get('name', get_host_id(ctx))
+
+
+def _get_agent_user(ctx):
+    agent = _get_agent(ctx)
+    return agent.get('user')
+
+
+def _get_agent(ctx):
+    return ctx.instance.runtime_properties.get(
+        'cloudify_agent',
+        ctx.instance.runtime_properties.get(
+            'agent_config',
+            ctx.node.properties.get(
+                'agent_config', {})))
 
 
 def _get_service_name(ctx):
@@ -487,7 +477,7 @@ def _set_diamond_service(ctx, config_file):
     new_content = old_content.replace(
         '{{ CMD }}',
         '{0} --configfile {1}'.format(diamond_path, config_file))
-    workdir = os.environ.get(constants.AGENT_WORK_DIR_KEY, '')
+    workdir = os.environ.get(AGENT_WORK_DIR_KEY, '')
     new_content = new_content.replace('{{ WORK_DIR }}', workdir)
     new_content = new_content.replace(
         '{{ CLUSTER_SETTINGS_PATH }}',
@@ -496,7 +486,7 @@ def _set_diamond_service(ctx, config_file):
     new_content = \
         new_content.replace(
             '{{ AGENT_USER }}',
-            ctx.instance.runtime_properties['cloudify_agent']['user'])
+            _get_agent_user(ctx))
 
     with open(source, 'w') as t:
         t.write(new_content)

@@ -1,2 +1,10 @@
 mock
+flake8
+pytest
 testtools
+pytest-cov
+testfixtures
+
+# For integration tests
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]==master
+git+https://github.com/cloudify-cosmo/cloudify-cli@master#egg=cloudify-cli==master
