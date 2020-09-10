@@ -74,7 +74,6 @@ commands:
               exit 1
             fi
 
-
   validate_documentation:
     steps:
       - run:
