@@ -417,8 +417,6 @@ workflows:
       - py3_compat
       - unittests_py27
       - unittests_py36
-      - validate_version
-      - validate_documentation
       - wagon:
           filters:
             branches:
@@ -434,34 +432,10 @@ workflows:
           requires:
             - wagon
             - rhel_wagon
-      - integration_tests_505:
-          requires:
-            - build_bundle
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master|dev)/
-      - integration_tests_510:
-          requires:
-            - build_bundle
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master|dev)/
       - release:
           filters:
             branches:
               only: /master/
-          requires:
-            - validate_version
-            - validate_documentation
-            - integration_tests_505
-            - integration_tests_510
-      - merge_docs:
-          filters:
-            branches:
-              only: /master/
-          requires:
-            - release
-            - validate_documentation
   nightly:
     triggers:
     - schedule:
