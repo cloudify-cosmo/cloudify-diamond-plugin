@@ -21,7 +21,8 @@ blueprint_list = []
 
 @pytest.fixture(scope='function', params=blueprint_list)
 def blueprint_examples(**_):
-pass
+    pass
+
 
 def test_blueprints(blueprint_examples):
     assert blueprint_examples is None
