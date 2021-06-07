@@ -452,25 +452,25 @@ workflows:
       - validate_version
       - unittests_py27
       - unittests_py36
-      - wagon:
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master)/
-      - rhel_wagon:
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master)/
-      - integration_tests_505:
-          requires:
-            - wagon
-            - rhel_wagon
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master)/
-      - integration_tests_510:
-          requires:
-            - wagon
-            - rhel_wagon
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master)/
+#      - wagon:
+#          filters:
+#            branches:
+#              only: /([0-9\.]*\-build|master)/
+#      - rhel_wagon:
+#          filters:
+#            branches:
+#              only: /([0-9\.]*\-build|master)/
+#      - integration_tests_505:
+#          requires:
+#            - wagon
+#            - rhel_wagon
+#          filters:
+#            branches:
+#              only: /([0-9\.]*\-build|master)/
+#      - integration_tests_510:
+#          requires:
+#            - wagon
+#            - rhel_wagon
+#          filters:
+#            branches:
+#              only: /([0-9\.]*\-build|master)/
