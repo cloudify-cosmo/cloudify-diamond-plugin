@@ -1,2 +1,3 @@
 1.3.18: Deprecation.
 1.3.19: Create new release.
+1.3.20: RD-3035 Support ecosystem-test validate-plugin-version CLI
