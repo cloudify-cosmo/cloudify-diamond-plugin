@@ -49,6 +49,6 @@ setup(
     install_requires=['cloudify-common>=4.5.5',
                       'cloudify-utilities-plugins-sdk>=0.0.25',  # _compat
                       'diamond==3.5.0',
-                      'ConfigObj==5.0.6',
+                      'ConfigObj==5.0.9',
                       'psutil==2.1.1']
 )
